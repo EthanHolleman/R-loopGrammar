@@ -323,7 +323,7 @@ if __name__ == '__main__':
                                                             args.get('start_index', 0), args.get('end_index', 0),
                                                             args.get('window_length_large', 10),
                                                             args.get('output_file', 'output'), 4,
-                                                            args.get('max_padding', 0))
+                                                            args.get('max_padding', 0), True)
 
             RegionsExtractor.compare_windows(small_window, large_window, args.get('threshold', 20),
                                              args.get('window_length_large', 10))

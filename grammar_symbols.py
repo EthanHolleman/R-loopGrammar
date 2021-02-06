@@ -5,7 +5,7 @@ import openpyxl
 import random
 from openpyxl import Workbook
 from openpyxl.cell import WriteOnlyCell
-from openpyxl.styles import Font, Color
+from openpyxl.styles import Font
 
 """
 Script to generated R-loop words as specified by a BED file.
@@ -33,6 +33,8 @@ along with GrammarSymbols.  If not, see <http://www.gnu.org/licenses/>.
 
 class GrammarSymbols:
     __alpha = '\u03B1'
+    __beta = '\u03B2'
+    __delta = '\u03B4'
     __rho = '\u03C1'
     __rho_hat = __rho + '^'
     __sigma = '\u03C3'
@@ -179,13 +181,15 @@ class GrammarSymbols:
                             help='Consider only NUM_RLOOPS rloops inside the BED file', default=10)
         parser.add_argument('-r', '--random-rloops', required=False, action='store_true',
                             help='Consider only NUM_RLOOPS random rloops inside the BED file')
+        parser.add_argument('-w', '--window-length', metavar='WINDOW_LENGTH', type=int, required=False,
+                            help='Number of nucleotides in single region', default=5)
         parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
                             help='Output XLSX file', default='output')
         return parser.parse_args()
 
     @classmethod
-    def extract_regions(cls, fasta_in, bed_in, start_idx, end_idx, max_rloops=1800, random_rloops=False, xlsx_in=None,
-                        out_file='output'):
+    def extract_regions(cls, fasta_in, bed_in, start_idx, end_idx, window_length=5, max_rloops=1800,
+                        random_rloops=False, xlsx_in=None, out_file='output'):
         res = dict()
         with open(fasta_in, 'r') as fin:
             fin.readline()
@@ -208,15 +212,18 @@ class GrammarSymbols:
                 r3_rev = r3[::-1]
 
                 # res contains info from all the R-loops in BED file
-                res[str(idx_1) + '_' + str(idx_2) + '_' + str(i)] = {'r1': [r1[i:i + 5] for i in range(0, len(r1), 5)],
-                                                                     'r1_rev': [r1_rev[i:i + 5][::-1] for i in
-                                                                                range(0, len(r1), 5)],
-                                                                     'r2': [r2[i:i + 5] for i in range(0, len(r2), 5)],
-                                                                     'r2_rev': [r2_rev[i:i + 5][::-1] for i in
-                                                                                range(0, len(r2), 5)],
-                                                                     'r3': [r3[i:i + 5] for i in range(0, len(r3), 5)],
-                                                                     'r3_rev': [r3_rev[i:i + 5][::-1] for i in
-                                                                                range(0, len(r3), 5)]
+                res[str(idx_1) + '_' + str(idx_2) + '_' + str(i)] = {'r1': [r1[i:i + window_length] for
+                                                                            i in range(0, len(r1), window_length)],
+                                                                     'r1_rev': [r1_rev[i:i + window_length][::-1] for i
+                                                                                in range(0, len(r1), window_length)],
+                                                                     'r2': [r2[i:i + window_length] for
+                                                                            i in range(0, len(r2), window_length)],
+                                                                     'r2_rev': [r2_rev[i:i + window_length][::-1] for i
+                                                                                in range(0, len(r2), window_length)],
+                                                                     'r3': [r3[i:i + window_length] for
+                                                                            i in range(0, len(r3), window_length)],
+                                                                     'r3_rev': [r3_rev[i:i + window_length][::-1] for i
+                                                                                in range(0, len(r3), window_length)]
                                                                      }
 
                 line = fin.readline()
@@ -322,10 +329,23 @@ class GrammarSymbols:
                         tmp_locs = cls.__find_locations(r1_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
                         if len(tmp_locs) > 0:
+                            while 'N2' in tmp_keys:
+                                tmp_keys.remove('N2')
+
                             tmp_val = tmp_locs[0].split('_')[1]
                             tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
 
                     r1_funny_letters = list(set([cls.GREEK_MAPPING_R1.get(i, '?') for i in set(tmp_keys)]))
+
+                    if cls.__tau in r1_funny_letters and cls.__tau_hat in r1_funny_letters:
+                        r1_funny_letters.remove(cls.__tau)
+                        r1_funny_letters.remove(cls.__tau_hat)
+                        r1_funny_letters.append(cls.__delta)
+
+                    if cls.__sigma in r1_funny_letters and cls.__sigma_hat in r1_funny_letters:
+                        r1_funny_letters.remove(cls.__sigma)
+                        r1_funny_letters.remove(cls.__sigma_hat)
+                        r1_funny_letters.append(cls.__beta)
 
                     if len(r1_funny_letters) == 1:
                         word_dict[k]['r1_funny_letters'].append(r1_funny_letters[0])
@@ -345,10 +365,23 @@ class GrammarSymbols:
                         tmp_locs = cls.__find_locations(r2_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
                         if len(tmp_locs) > 0:
+                            while 'N2' in tmp_keys:
+                                tmp_keys.remove('N2')
+
                             tmp_val = tmp_locs[0].split('_')[1]
                             tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
 
                     r2_funny_letters = list(set([cls.GREEK_MAPPING_R2.get(i, '?') for i in set(tmp_keys)]))
+
+                    if cls.__tau in r2_funny_letters and cls.__tau_hat in r2_funny_letters:
+                        r2_funny_letters.remove(cls.__tau)
+                        r2_funny_letters.remove(cls.__tau_hat)
+                        r2_funny_letters.append(cls.__delta)
+
+                    if cls.__sigma in r2_funny_letters and cls.__sigma_hat in r2_funny_letters:
+                        r2_funny_letters.remove(cls.__sigma)
+                        r2_funny_letters.remove(cls.__sigma_hat)
+                        r2_funny_letters.append(cls.__beta)
 
                     if len(r2_funny_letters) == 1:
                         word_dict[k]['r2_funny_letters'].append(r2_funny_letters[0])
@@ -364,10 +397,23 @@ class GrammarSymbols:
                         tmp_locs = cls.__find_locations(r3_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
                         if len(tmp_locs) > 0:
+                            while 'N2' in tmp_keys:
+                                tmp_keys.remove('N2')
+
                             tmp_val = tmp_locs[0].split('_')[1]
                             tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
 
                     r3_funny_letters = list(set([cls.GREEK_MAPPING_R3.get(i, '?') for i in set(tmp_keys)]))
+
+                    if cls.__tau in r3_funny_letters and cls.__tau_hat in r3_funny_letters:
+                        r3_funny_letters.remove(cls.__tau)
+                        r3_funny_letters.remove(cls.__tau_hat)
+                        r3_funny_letters.append(cls.__delta)
+
+                    if cls.__sigma in r3_funny_letters and cls.__sigma_hat in r3_funny_letters:
+                        r3_funny_letters.remove(cls.__sigma)
+                        r3_funny_letters.remove(cls.__sigma_hat)
+                        r3_funny_letters.append(cls.__beta)
 
                     if len(r3_funny_letters) == 1:
                         word_dict[k]['r3_funny_letters'].append(r3_funny_letters[0])
@@ -448,21 +494,35 @@ class GrammarSymbols:
         wb = openpyxl.load_workbook(out_file)
         ws = wb['Grammar Symbols']
 
-        for x, y in [(i.get('r1', None), i.get('r3', None)) for i in last_cells.values()]:
+        for k, x, y in [(i, j.get('r1', None), j.get('r3', None)) for i, j in last_cells.items()]:
             x_col = int(x.split('_')[0])
             x_row = int(x.split('_')[1])
-            ws.cell(row=x_row, column=x_col).value = cls.__omega
+            v = ws.cell(row=x_row, column=x_col - 2).value
+            cell_value = cls.__omega + str(len(v))
+
+            if len(v) == window_length:
+                cell_value = ws.cell(row=x_row, column=x_col).value + cls.__omega + '0'
+
+            ws.cell(row=x_row, column=x_col).value = cell_value
+            last_cells[k]['r1'] = cell_value
 
             y_col = int(y.split('_')[0])
             y_row = int(y.split('_')[1])
-            ws.cell(row=y_row, column=y_col).value = cls.__alpha
+            v = ws.cell(row=y_row, column=y_col - 2).value
+            cell_value = cls.__alpha + str(len(v))
+
+            if len(v) == window_length:
+                cell_value = cls.__alpha + '0' + ws.cell(row=y_row, column=y_col).value
+
+            ws.cell(row=y_row, column=y_col).value = cell_value
+            last_cells[k]['r3'] = cell_value
 
         wb.save(out_file)
 
         with open(out_file + '.txt', 'w') as fout:
             for k, v in word_dict.items():
-                v['r1_funny_letters'][-1] = cls.__omega
-                v['r3_funny_letters'][-1] = cls.__alpha
+                v['r1_funny_letters'][-1] = last_cells.get(k, dict()).get('r1', cls.__omega)
+                v['r3_funny_letters'][-1] = last_cells.get(k, dict()).get('r3', cls.__alpha)
                 line = k + ': ' + ''.join(v['r1_funny_letters']) + ''.join(reversed(v['r2_funny_letters'])) + \
                        ''.join(reversed(v['r3_funny_letters']))
                 fout.write(line + '\n')
@@ -471,6 +531,6 @@ class GrammarSymbols:
 if __name__ == '__main__':
     args = vars(GrammarSymbols.get_args())
     GrammarSymbols.extract_regions(args.get('input_fasta', None), args.get('input_bed', None),
-                                   args.get('start_index', 0), args.get('end_index', 0), args.get('num_rloops', 10),
-                                   args.get('random_rloops', False), args.get('input_xlsx', None),
-                                   args.get('output_file', 'output'))
+                                   args.get('start_index', 0), args.get('end_index', 0), args.get('window_length', 5),
+                                   args.get('num_rloops', 10), args.get('random_rloops', False),
+                                   args.get('input_xlsx', None), args.get('output_file', 'output'))
