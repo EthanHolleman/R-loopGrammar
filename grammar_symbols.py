@@ -34,6 +34,7 @@ along with GrammarSymbols.  If not, see <http://www.gnu.org/licenses/>.
 class GrammarSymbols:
     __alpha = '\u03B1'
     __beta = '\u03B2'
+    __gamma = '\u03B3'
     __delta = '\u03B4'
     __rho = '\u03C1'
     __rho_hat = __rho + '^'
@@ -49,8 +50,9 @@ class GrammarSymbols:
         'W3': __sigma,
         'W4': __sigma,
         'N1': __sigma_hat,  # after R-loop
-        'N2': __rho,
-        'N3': __sigma  # before R-loop
+        'N2': __gamma,
+        'N3': __sigma,  # before R-loop
+        'FORCE_GAMMA': __gamma
     }
 
     GREEK_MAPPING_R2 = {
@@ -60,7 +62,8 @@ class GrammarSymbols:
         'W4': __tau_hat,
         'N1': __tau,  # after R-loop
         'N2': __rho,
-        'N3': __tau_hat  # before R-loop
+        'N3': __tau_hat,  # before R-loop
+        'FORCE_RHO': __rho
     }
 
     GREEK_MAPPING_R3 = {
@@ -69,8 +72,9 @@ class GrammarSymbols:
         'W3': __sigma,
         'W4': __sigma,
         'N1': __sigma_hat,  # after R-loop
-        'N2': __rho,
-        'N3': __sigma  # before R-loop
+        'N2': __gamma,
+        'N3': __sigma,  # before R-loop
+        'FORCE_GAMMA': __gamma
     }
 
     @classmethod
@@ -91,6 +95,7 @@ class GrammarSymbols:
 
         return gene_seq[:bed_start], gene_seq[bed_start:bed_end], gene_seq[bed_end:]
 
+    # For finding occurrences of parsing block in the output of RegionExtractor
     @classmethod
     def __find_locations(cls, val, region1_values, region2_values, region3_values, region4_values, ret):
         if val in ret.keys():
@@ -128,6 +133,7 @@ class GrammarSymbols:
         ret[val] = sorted_values
         return sorted_values
 
+    # For computing N1, N2, N3
     @classmethod
     def __count_occurrences(cls, val, data, ret):
         if val in ret.keys():
@@ -258,8 +264,10 @@ class GrammarSymbols:
         wb_region2_values = dict()
         wb_region3_values = dict()
         wb_region4_values = dict()
+        wb_region1_extra_values = dict()
         wb_region2_extra_values = dict()
         wb_region3_extra_values = dict()
+        wb_region4_extra_values = dict()
 
         if xlsx_in:
             wb_regions = openpyxl.load_workbook(xlsx_in, read_only=True)
@@ -272,10 +280,14 @@ class GrammarSymbols:
                     wb_region3_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
                 elif ws_region.title.endswith('4'):
                     wb_region4_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
+                elif ws_region.title.endswith('1 Extra'):
+                    wb_region1_extra_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
                 elif ws_region.title.endswith('2 Extra'):
                     wb_region2_extra_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
                 elif ws_region.title.endswith('3 Extra'):
                     wb_region3_extra_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
+                elif ws_region.title.endswith('4 Extra'):
+                    wb_region4_extra_values = {x[0].value: x[7].value for x in list(ws_region.rows)}
             wb_regions.close()
 
         i = 0
@@ -290,7 +302,7 @@ class GrammarSymbols:
             row = list()
             use_red_text = False
 
-            # We read one value from r1, r2 and r3, at the same time but they have different lengths
+            # We read one value from r1, r2 and r3 at the same time, but they have different lengths
             for k in sorted_keys:  # This "for" generates a row in the output file
                 if not word_dict.get(k, None):
                     word_dict[k] = {'r1_funny_letters': list(), 'r2_funny_letters': list(), 'r3_funny_letters': list()}
@@ -301,7 +313,7 @@ class GrammarSymbols:
                 r1_val = res[k]['r1'][i] if len(res[k]['r1']) > i else None
                 r1_val_locations = cls.__find_locations(r1_val, wb_region1_values, wb_region2_values, wb_region3_values,
                                                         wb_region4_values, locations) if r1_val else None
-                # if r1_val not in "most relevant list"
+                # If r1_val not in "most relevant list"
                 if (r1_val_locations is None or len(r1_val_locations) < 1) and r1_val:
                     r1_val_locations = cls.__count_occurrences(r1_val, res, counts)
 
@@ -322,10 +334,19 @@ class GrammarSymbols:
                 r1_funny_letters = None
                 if r1_val_locations and len(r1_val_locations) > 0:
                     tmp_val = r1_val_locations[0].split('_')[1]  # take weight/count
-                    # collect N/W whose value is the same as the maximum one
+                    # Collect N/W whose value is the same as the maximum one
                     tmp_keys = [i.split('_')[0].upper() for i in r1_val_locations if i.split('_')[1] == tmp_val]
 
-                    if 'N2' in tmp_keys:
+                    if len(tmp_keys) > 1 and len([i for i in tmp_keys if i.startswith('N')]) > 0:
+                        tmp_locs = cls.__find_locations(r1_val, wb_region1_extra_values, wb_region2_extra_values,
+                                                        wb_region3_extra_values, wb_region4_extra_values, dict())
+                        if len(tmp_locs) == 0:
+                            tmp_keys = ['FORCE_GAMMA']
+                        else:
+                            tmp_val = tmp_locs[0].split('_')[1]
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
+
+                    if 'N2' in tmp_keys:  # This can only happen if tmp_keys has length 1
                         tmp_locs = cls.__find_locations(r1_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
                         if len(tmp_locs) > 0:
@@ -333,19 +354,19 @@ class GrammarSymbols:
                                 tmp_keys.remove('N2')
 
                             tmp_val = tmp_locs[0].split('_')[1]
-                            tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
 
                     r1_funny_letters = list(set([cls.GREEK_MAPPING_R1.get(i, '?') for i in set(tmp_keys)]))
 
                     if cls.__tau in r1_funny_letters and cls.__tau_hat in r1_funny_letters:
                         r1_funny_letters.remove(cls.__tau)
                         r1_funny_letters.remove(cls.__tau_hat)
-                        r1_funny_letters.append(cls.__delta)
+                        r1_funny_letters.append(cls.__beta)
 
                     if cls.__sigma in r1_funny_letters and cls.__sigma_hat in r1_funny_letters:
                         r1_funny_letters.remove(cls.__sigma)
                         r1_funny_letters.remove(cls.__sigma_hat)
-                        r1_funny_letters.append(cls.__beta)
+                        r1_funny_letters.append(cls.__delta)
 
                     if len(r1_funny_letters) == 1:
                         word_dict[k]['r1_funny_letters'].append(r1_funny_letters[0])
@@ -361,6 +382,15 @@ class GrammarSymbols:
                     tmp_val = r2_val_locations[0].split('_')[1]
                     tmp_keys = [i.split('_')[0].upper() for i in r2_val_locations if i.split('_')[1] == tmp_val]
 
+                    if len(tmp_keys) > 1 and len([i for i in tmp_keys if i.startswith('N')]) > 0:
+                        tmp_locs = cls.__find_locations(r2_val, wb_region1_extra_values, wb_region2_extra_values,
+                                                        wb_region3_extra_values, wb_region4_extra_values, dict())
+                        if len(tmp_locs) == 0:
+                            tmp_keys = ['FORCE_RHO']
+                        else:
+                            tmp_val = tmp_locs[0].split('_')[1]
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
+
                     if 'N2' in tmp_keys:
                         tmp_locs = cls.__find_locations(r2_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
@@ -369,19 +399,19 @@ class GrammarSymbols:
                                 tmp_keys.remove('N2')
 
                             tmp_val = tmp_locs[0].split('_')[1]
-                            tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
 
                     r2_funny_letters = list(set([cls.GREEK_MAPPING_R2.get(i, '?') for i in set(tmp_keys)]))
 
                     if cls.__tau in r2_funny_letters and cls.__tau_hat in r2_funny_letters:
                         r2_funny_letters.remove(cls.__tau)
                         r2_funny_letters.remove(cls.__tau_hat)
-                        r2_funny_letters.append(cls.__delta)
+                        r2_funny_letters.append(cls.__beta)
 
                     if cls.__sigma in r2_funny_letters and cls.__sigma_hat in r2_funny_letters:
                         r2_funny_letters.remove(cls.__sigma)
                         r2_funny_letters.remove(cls.__sigma_hat)
-                        r2_funny_letters.append(cls.__beta)
+                        r2_funny_letters.append(cls.__delta)
 
                     if len(r2_funny_letters) == 1:
                         word_dict[k]['r2_funny_letters'].append(r2_funny_letters[0])
@@ -393,6 +423,15 @@ class GrammarSymbols:
                     tmp_val = r3_val_locations[0].split('_')[1]
                     tmp_keys = [i.split('_')[0].upper() for i in r3_val_locations if i.split('_')[1] == tmp_val]
 
+                    if len(tmp_keys) > 1 and len([i for i in tmp_keys if i.startswith('N')]) > 0:
+                        tmp_locs = cls.__find_locations(r3_val, wb_region1_extra_values, wb_region2_extra_values,
+                                                        wb_region3_extra_values, wb_region4_extra_values, dict())
+                        if len(tmp_locs) == 0:
+                            tmp_keys = ['FORCE_GAMMA']
+                        else:
+                            tmp_val = tmp_locs[0].split('_')[1]
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
+
                     if 'N2' in tmp_keys:
                         tmp_locs = cls.__find_locations(r3_val, dict(), wb_region2_extra_values,
                                                         wb_region3_extra_values, dict(), dict())
@@ -401,19 +440,19 @@ class GrammarSymbols:
                                 tmp_keys.remove('N2')
 
                             tmp_val = tmp_locs[0].split('_')[1]
-                            tmp_keys.extend([i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val])
+                            tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
 
                     r3_funny_letters = list(set([cls.GREEK_MAPPING_R3.get(i, '?') for i in set(tmp_keys)]))
 
                     if cls.__tau in r3_funny_letters and cls.__tau_hat in r3_funny_letters:
                         r3_funny_letters.remove(cls.__tau)
                         r3_funny_letters.remove(cls.__tau_hat)
-                        r3_funny_letters.append(cls.__delta)
+                        r3_funny_letters.append(cls.__beta)
 
                     if cls.__sigma in r3_funny_letters and cls.__sigma_hat in r3_funny_letters:
                         r3_funny_letters.remove(cls.__sigma)
                         r3_funny_letters.remove(cls.__sigma_hat)
-                        r3_funny_letters.append(cls.__beta)
+                        r3_funny_letters.append(cls.__delta)
 
                     if len(r3_funny_letters) == 1:
                         word_dict[k]['r3_funny_letters'].append(r3_funny_letters[0])

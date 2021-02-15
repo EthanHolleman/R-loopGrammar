@@ -180,8 +180,10 @@ class RegionsExtractor:
 
         wb = Workbook(write_only=True)
         wb_extra = Workbook(write_only=True)
+        ws_extra_r1_extra = wb_extra.create_sheet('Region 1 Extra')
         ws_extra_r2_extra = wb_extra.create_sheet('Region 2 Extra')
         ws_extra_r3_extra = wb_extra.create_sheet('Region 3 Extra')
+        ws_extra_r4_extra = wb_extra.create_sheet('Region 4 Extra')
 
         for k, v in regions.items():
             add_to_extra = True
@@ -215,10 +217,14 @@ class RegionsExtractor:
                 info.append(wnd_info.get('weight', 0))
                 ws.append(info)
 
-                if k.endswith('2'):
+                if k.endswith('1'):
+                    ws_extra_r1_extra.append(info)
+                elif k.endswith('2'):
                     ws_extra_r2_extra.append(info)
                 elif k.endswith('3'):
                     ws_extra_r3_extra.append(info)
+                elif k.endswith('4'):
+                    ws_extra_r4_extra.append(info)
 
                 if add_to_extra and \
                         (wnd_info.get('weight', 0) >= 0.01 or abs(prev_weight - wnd_info.get('weight', 0)) <= 0.001):
@@ -232,10 +238,14 @@ class RegionsExtractor:
 
         wb.save(out_file)
 
+        ws_extra_r1_extra.close()
         ws_extra_r2_extra.close()
         ws_extra_r3_extra.close()
-        wb_extra.move_sheet('Region 2 Extra', 5)
-        wb_extra.move_sheet('Region 3 Extra', 6)
+        ws_extra_r4_extra.close()
+        wb_extra.move_sheet('Region 1 Extra', 10)
+        wb_extra.move_sheet('Region 2 Extra', 10)
+        wb_extra.move_sheet('Region 3 Extra', 10)
+        wb_extra.move_sheet('Region 4 Extra', 10)
         wb_extra.save(out_file_extra)
 
         return out_file
