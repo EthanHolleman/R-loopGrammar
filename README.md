@@ -70,9 +70,11 @@ optional arguments:
                         Consider only NUM_RLOOPS rloops inside the BED file
   -r, --random-rloops   Consider only NUM_RLOOPS random rloops inside the BED
                         file
+  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
+                        Number of nucleotides in single region
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         Output XLSX file
 ```
 
 ### Example
-`python3 grammar_symbols.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_GRAMMAR.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx`
+`python3 grammar_symbols.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_GRAMMAR.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx -w 5`
