@@ -55,45 +55,12 @@ class GrammarWord:
 
     ASCII_TO_GREEK = {v: k for k, v in GREEK_TO_ASCII.items()}
 
-    GREEK_MAPPING_R1 = {
-        'W1': __sigma_hat,
-        'W2': __sigma_hat,
-        'W3': __sigma,
-        'W4': __sigma,
-        'N1': __sigma_hat,  # after R-loop
-        'N2': __gamma,
-        'N3': __sigma,  # before R-loop
-        'FORCE_GAMMA': __gamma
-    }
-
-    GREEK_MAPPING_R2 = {
-        'W1': __tau,
-        'W2': __tau,
-        'W3': __tau_hat,
-        'W4': __tau_hat,
-        'N1': __tau,  # after R-loop
-        'N2': __rho,
-        'N3': __tau_hat,  # before R-loop
-        'FORCE_RHO': __rho
-    }
-
-    GREEK_MAPPING_R3 = {
-        'W1': __sigma_hat,
-        'W2': __sigma_hat,
-        'W3': __sigma,
-        'W4': __sigma,
-        'N1': __sigma_hat,  # after R-loop
-        'N2': __gamma,
-        'N3': __sigma,  # before R-loop
-        'FORCE_GAMMA': __gamma
-    }
-
     @classmethod
     def __get_order_key(cls, x):
         if not x:
             return 0
 
-        return sum([int(i) for i in x.split('_')])
+        return int(x.split('_')[2])
 
     @classmethod
     def __get_regions(cls, gene_seq, bed_start, bed_end):

@@ -383,11 +383,6 @@ class GrammarDict:
 
                     r1_funny_letters = list(set([cls.GREEK_MAPPING_R1.get(i, '?') for i in set(tmp_keys)]))
 
-                    if cls.__tau in r1_funny_letters and cls.__tau_hat in r1_funny_letters:
-                        r1_funny_letters.remove(cls.__tau)
-                        r1_funny_letters.remove(cls.__tau_hat)
-                        r1_funny_letters.append(cls.__beta)
-
                     if cls.__sigma in r1_funny_letters and cls.__sigma_hat in r1_funny_letters:
                         r1_funny_letters.remove(cls.__sigma)
                         r1_funny_letters.remove(cls.__sigma_hat)
@@ -433,11 +428,6 @@ class GrammarDict:
                         r2_funny_letters.remove(cls.__tau_hat)
                         r2_funny_letters.append(cls.__beta)
 
-                    if cls.__sigma in r2_funny_letters and cls.__sigma_hat in r2_funny_letters:
-                        r2_funny_letters.remove(cls.__sigma)
-                        r2_funny_letters.remove(cls.__sigma_hat)
-                        r2_funny_letters.append(cls.__delta)
-
                     if len(r2_funny_letters) == 1:
                         word_dict[k]['r2_funny_letters'].append(r2_funny_letters[0])
                     else:
@@ -468,11 +458,6 @@ class GrammarDict:
                             tmp_keys = [i.split('_')[0].upper() for i in tmp_locs if i.split('_')[1] == tmp_val]
 
                     r3_funny_letters = list(set([cls.GREEK_MAPPING_R3.get(i, '?') for i in set(tmp_keys)]))
-
-                    if cls.__tau in r3_funny_letters and cls.__tau_hat in r3_funny_letters:
-                        r3_funny_letters.remove(cls.__tau)
-                        r3_funny_letters.remove(cls.__tau_hat)
-                        r3_funny_letters.append(cls.__beta)
 
                     if cls.__sigma in r3_funny_letters and cls.__sigma_hat in r3_funny_letters:
                         r3_funny_letters.remove(cls.__sigma)
