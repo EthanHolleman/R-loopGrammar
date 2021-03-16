@@ -78,3 +78,75 @@ optional arguments:
 
 ### Example
 `python3 grammar_symbols.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_GRAMMAR.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx -w 5`
+
+
+# Grammar Dict
+### Dependencies
+* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
+
+### Usage
+```text
+usage: grammar_dict.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE [-x XLSX_IN_FILE]
+                       -s START_INDEX -e END_INDEX [-n NUM_RLOOPS] [-r]
+                       [-w WINDOW_LENGTH] [-o OUTPUT_FILE]
+
+Regions extractor
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
+                        FASTA input file
+  -b BED_IN_FILE, --input-bed BED_IN_FILE
+                        BED input file
+  -x XLSX_IN_FILE, --input-xlsx XLSX_IN_FILE
+                        XLSX input file
+  -s START_INDEX, --start-index START_INDEX
+                        Start index of gene region
+  -e END_INDEX, --end-index END_INDEX
+                        End index of gene region
+  -n NUM_RLOOPS, --num-rloops NUM_RLOOPS
+                        Consider only NUM_RLOOPS rloops inside the BED file
+  -r, --random-rloops   Consider only NUM_RLOOPS random rloops inside the BED
+                        file
+  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
+                        Number of nucleotides in single region
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Output XLSX file
+```
+
+### Example
+`python3 grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_DICT.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx -w 5`
+
+
+# Grammar Word
+### Dependencies
+* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
+
+### Usage
+```text
+usage: grammar_word.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE -j JSON_IN_FILE -s
+                       START_INDEX -e END_INDEX [-w WINDOW_LENGTH]
+                       [-o OUTPUT_FILE]
+
+Regions extractor
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
+                        FASTA input file
+  -b BED_IN_FILE, --input-bed BED_IN_FILE
+                        BED input file
+  -j JSON_IN_FILE, --input-json JSON_IN_FILE
+                        JSON input file
+  -s START_INDEX, --start-index START_INDEX
+                        Start index of gene region
+  -e END_INDEX, --end-index END_INDEX
+                        End index of gene region
+  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
+                        Number of nucleotides in single region
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Output TXT file
+```
+
+### Example
+`python3 grammar_word.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_WORDS.txt -s 1 -e 1929 -j pFC53_SUPERCOILED_DICT.xlsx.json -w 5`
