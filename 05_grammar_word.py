@@ -3,7 +3,7 @@ import argparse
 import json
 
 """
-Script to generated R-loop words as specified by a BED file.
+Script to generated words for R-loops in a BED file using a dictionary.
 
 
 Copyright 2020 Margherita Maria Ferrari.
