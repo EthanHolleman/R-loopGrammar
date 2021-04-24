@@ -96,7 +96,7 @@ class RegionsThreshold:
         parser.add_argument('-s', '--shannon-entropy', required=False, action='store_true',
                             help='Use Shannon entropy')
         parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output XLSX file', default='output')
+                            help='Output XLSX file', default='output.xlsx')
         return parser.parse_args()
 
     @classmethod

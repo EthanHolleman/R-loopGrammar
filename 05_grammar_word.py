@@ -89,11 +89,11 @@ class GrammarWord:
         parser.add_argument('-w', '--window-length', metavar='WINDOW_LENGTH', type=int, required=False,
                             help='Number of nucleotides in single region', default=5)
         parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output TXT file', default='output')
+                            help='Output TXT file', default='output.txt')
         return parser.parse_args()
 
     @classmethod
-    def extract_word(cls, fasta_in, bed_in, json_in, start_idx, end_idx, window_length=5, out_file='output'):
+    def extract_word(cls, fasta_in, bed_in, json_in, start_idx, end_idx, window_length=5, out_file='output.txt'):
         res = dict()
         with open(fasta_in, 'r') as fin:
             fin.readline()
@@ -206,4 +206,4 @@ if __name__ == '__main__':
     args = vars(GrammarWord.get_args())
     GrammarWord.extract_word(args.get('input_fasta', None), args.get('input_bed', None), args.get('input_json', None),
                              args.get('start_index', 0), args.get('end_index', 0), args.get('window_length', 5),
-                             args.get('output_file', 'output'))
+                             args.get('output_file', 'output.txt'))

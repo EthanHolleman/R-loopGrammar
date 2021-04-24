@@ -82,8 +82,8 @@ class RegionsExtractor:
                             help='Number of nucleotides in small single region', default=5)
         parser.add_argument('-wl', '--window_length_large', metavar='WINDOW_LENGTH_LARGE', type=int, required=False,
                             help='Number of nucleotides in large single region', default=10)
-        parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output XLSX file', default='output')
+        parser.add_argument('-o', '--prefix-output-files', metavar='PREFIX_OUTPUT_FILES', type=str, required=False,
+                            help='Prefix output files (without extension)', default='output')
         parser.add_argument('-m', '--merge-regions', required=False, action='store_true',
                             help='Merge first 1st and 2nd regions (resp. 3rd and 4th)')
         parser.add_argument('-s', '--start-index', metavar='START_INDEX', type=int, required=True,
@@ -268,19 +268,20 @@ if __name__ == '__main__':
         # no padding for merge
         RegionsExtractor.extract_regions(args.get('input_fasta', None), args.get('input_bed', None),
                                          args.get('start_index', 0), args.get('end_index', 0),
-                                         args.get('window_length_small', 5), args.get('output_file', 'output'), 2)
+                                         args.get('window_length_small', 5),
+                                         args.get('prefix_output_files', 'output'), 2)
     else:
         small_window = RegionsExtractor.extract_regions(args.get('input_fasta', None), args.get('input_bed', None),
                                                         args.get('start_index', 0), args.get('end_index', 0),
                                                         args.get('window_length_small', 5),
-                                                        args.get('output_file', 'output'), 4,
+                                                        args.get('prefix_output_files', 'output'), 4,
                                                         args.get('max_padding', 0), True)
 
         if args.get('compute_large_window', False):
             large_window = RegionsExtractor.extract_regions(args.get('input_fasta', None), args.get('input_bed', None),
                                                             args.get('start_index', 0), args.get('end_index', 0),
                                                             args.get('window_length_large', 10),
-                                                            args.get('output_file', 'output'), 4,
+                                                            args.get('prefix_output_files', 'output'), 4,
                                                             args.get('max_padding', 0), True)
 
             RegionsExtractor.compare_windows(small_window, large_window, args.get('threshold', 20),

@@ -207,12 +207,12 @@ class GrammarDict:
         parser.add_argument('-w', '--window-length', metavar='WINDOW_LENGTH', type=int, required=True,
                             help='Number of nucleotides in single region', default=5)
         parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output XLSX file', default='output')
+                            help='Output XLSX file', default='output.xlsx')
         return parser.parse_args()
 
     @classmethod
     def extract_regions(cls, fasta_in, bed_in, xlsx_in, start_idx, end_idx, window_length=5, xlsx_threshold_in=None,
-                        out_file='output'):
+                        out_file='output.xlsx'):
         max_rloops = 1800
         res = dict()
         with open(fasta_in, 'r') as fin:
@@ -609,4 +609,4 @@ if __name__ == '__main__':
     GrammarDict.extract_regions(args.get('input_fasta', None), args.get('input_bed', None),
                                 args.get('input_xlsx', None), args.get('start_index', 0), args.get('end_index', 0),
                                 args.get('window_length', 5), args.get('input_xlsx_threshold', None),
-                                args.get('output_file', 'output'))
+                                args.get('output_file', 'output.xlsx'))

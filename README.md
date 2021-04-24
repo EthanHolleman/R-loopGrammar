@@ -22,8 +22,8 @@ optional arguments:
                         Number of nucleotides in small single region
   -wl WINDOW_LENGTH_LARGE, --window_length_large WINDOW_LENGTH_LARGE
                         Number of nucleotides in large single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
+  -o PREFIX_OUTPUT_FILES, --prefix-output-files PREFIX_OUTPUT_FILES
+                        Prefix output files (without extension)
   -m, --merge-regions   Merge first 1st and 2nd regions (resp. 3rd and 4th)
   -s START_INDEX, --start-index START_INDEX
                         Start index of gene region
@@ -64,10 +64,10 @@ optional arguments:
 
 ### Example
 Thresholding based on weight jump:
-`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -o pFC53_SUPERCOILED_w5_weight_threshold`
+`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -o pFC53_SUPERCOILED_w5_weight_threshold.xlsx`
 
 Thresholding based on Shannon entropy:
-`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -s -o pFC53_SUPERCOILED_w5_weight_shannon`
+`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -s -o pFC53_SUPERCOILED_w5_weight_shannon.xlsx`
 
 
 # 03 Training Set
