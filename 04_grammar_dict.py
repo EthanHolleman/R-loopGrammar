@@ -328,10 +328,11 @@ class GrammarDict:
         row = list()
         locations = dict()
         counts = dict()
+
         grammar_dict = {'rloops': list(res.keys()),
-                        'region1': dict(),
-                        'region2_3': dict(),
-                        'region4': dict()
+                        'region1': {cls.GREEK_TO_ASCII.get(z, '???'): list() for z in cls.GREEK_MAPPING_R1.values()},
+                        'region2_3': {cls.GREEK_TO_ASCII.get(z, '???'): list() for z in cls.GREEK_MAPPING_R2.values()},
+                        'region4': {cls.GREEK_TO_ASCII.get(z, '???'): list() for z in cls.GREEK_MAPPING_R3.values()}
                         }
 
         while len(row) > 0 or i == 0:
