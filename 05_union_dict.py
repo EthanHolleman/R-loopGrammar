@@ -51,6 +51,17 @@ class UnionDict:
         return region1_values, region2_values, region3_values, region4_values
 
     @classmethod
+    # Read weights for a given tuple
+    def __get_weights(cls, pattern, region1_values, region2_values, region3_values, region4_values):
+        return region1_values.get(pattern, 0), region2_values.get(pattern, 0), region3_values.get(pattern, 0), \
+               region4_values.get(pattern, 0)
+
+    @classmethod
+    # Find max weight for a given tuple
+    def __get_max_weight(cls, pattern, region1_values, region2_values, region3_values, region4_values):
+        return max(cls.__get_weights(pattern, region1_values, region2_values, region3_values, region4_values))
+
+    @classmethod
     def get_args(cls):
         parser = argparse.ArgumentParser(description='Regions extractor')
         parser.add_argument('-j1', '--input-json-1', metavar='JSON1_IN_FILE', type=str, required=True,
@@ -68,13 +79,13 @@ class UnionDict:
     @classmethod
     # Determine intersection for each grammar symbol in the same region
     def intersect_symbol_json(cls, json_in_1, json_in_2, output_prefix='out'):
-        intersect_dict = {'region1': dict(), 'region2': dict(), 'region3': dict()}
+        intersect_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
 
         with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
             grammar_dict_1 = json.load(fin1)
             grammar_dict_2 = json.load(fin2)
 
-        for k in ['region1', 'region2', 'region3']:
+        for k in ['region1', 'region2_3', 'region4']:
             # sub_k is a grammar symbol, sub_v is the list of corresponding tuples from dict_1
             for sub_k, sub_v in grammar_dict_1.get(k, dict()).items():
                 # Collect tuples in sub_v in dict_1 that appear also
@@ -93,19 +104,16 @@ class UnionDict:
             # For tuples in the dictionary, take the corresponding weight in 'region' specified in input
             for tmp_k, tmp_v in grammar_dict.get(region, dict()).items():
                 for v in tmp_v:
-                    if region.endswith('1'):
-                        weight = region1_values.get(v, 0)
-                    elif region.endswith('2'):
-                        weight = max(region2_values.get(v, 0), region3_values.get(v, 0))
-                    else:
-                        weight = region4_values.get(v, 0)
+                    w1, w2, w3, w4 = cls.__get_weights(v, region1_values, region2_values, region3_values,
+                                                       region4_values)
+                    weights = {'r1_weight': w1, 'r2_weight': w2, 'r3_weight': w3, 'r4_weight': w4}
 
-                    # dictionary: {tuple v : {grammar symbol in dictionary : {file_number : weight in 'region'}}}
-                    r_dict[v] = {tmp_k: {w_key: weight}}
+                    # dictionary: {tuple v : {grammar symbol in dictionary : {file_number : {r1: weight, ...}}}}
+                    r_dict[v] = {tmp_k: {w_key: weights}}
 
             return r_dict
 
-        intersect_region_dict = {'region1': dict(), 'region2': dict(), 'region3': dict()}
+        intersect_region_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
 
         with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
             grammar_dict_1 = json.load(fin1)
@@ -114,7 +122,7 @@ class UnionDict:
         wb1_region1_values, wb1_region2_values, wb1_region3_values, wb1_region4_values = cls.__read_xlsx(xlsx_in_1)
         wb2_region1_values, wb2_region2_values, wb2_region3_values, wb2_region4_values = cls.__read_xlsx(xlsx_in_2)
 
-        for k in ['region1', 'region2', 'region3']:
+        for k in ['region1', 'region2_3', 'region4']:
             # For region k and for each tuple in k, create dictionary specifying the grammar symbol, weight, file_number
             r_dict_1 = __get_r_dict(grammar_dict_1, k, wb1_region1_values, wb1_region2_values, wb1_region3_values,
                                     wb1_region4_values, 'file1')
@@ -149,40 +157,7 @@ class UnionDict:
     @classmethod
     # Determine union of two dictionaries
     def union_json(cls, json_in_1, json_in_2, xlsx_in_1, xlsx_in_2, output_prefix='out'):
-        def __manage_conflict(grammar_dict, region, symbol, pattern, union_list_tmp,
-                              wb1_region1_values_tmp, wb1_region2_values_tmp, wb1_region3_values_tmp,
-                              wb1_region4_values_tmp, wb2_region1_values_tmp, wb2_region2_values_tmp,
-                              wb2_region3_values_tmp, wb2_region4_values_tmp):
-            # Take grammar symbols in dict_2 different from sub_k
-            for k2 in [i for i in grammar_dict.get(region, dict()).keys() if i not in symbol]:
-                # Check if v appears in the list of tuples corresponding to the grammar symbol k2 in dict_2
-                if pattern in grammar_dict.get(region, dict()).get(k2, list()):
-                    # Resolve conflicts by removing v from the tuples corresponding to sub_k in the union
-                    # if weight_1 < weight_2: v is still in the union and corresponds to k2
-                    if region.endswith('1'):
-                        if wb1_region1_values_tmp.get(pattern, 0) < wb2_region1_values_tmp.get(pattern, 0):
-                            union_list_tmp.remove(pattern)
-                        # else:  # If w1 > w2, remove v from dict_2
-                        #     grammar_dict.get(region, dict()).get(k2, list()).remove(pattern)
-                    # k = region_2 : take max among region_2 and region_3 in xlsx
-                    elif region.endswith('2'):
-                        weight_1 = max(wb1_region2_values_tmp.get(pattern, 0), wb1_region3_values_tmp.get(pattern, 0))
-                        weight_2 = max(wb2_region2_values_tmp.get(pattern, 0), wb2_region3_values_tmp.get(pattern, 0))
-                        if weight_1 < weight_2:
-                            union_list_tmp.remove(pattern)
-                        # else:
-                        #     grammar_dict.get(region, dict()).get(k2, list()).remove(pattern)
-                    else:
-                        if wb1_region4_values_tmp.get(pattern, 0) < wb2_region4_values_tmp.get(pattern, 0):
-                            union_list_tmp.remove(pattern)
-                        # else:
-                        #     grammar_dict.get(region, dict()).get(k2, list()).remove(pattern)
-
-                    # dict_2: v appears at most once in region k, so we have at most one grammar symbol k2
-                    break
-            return union_list_tmp
-
-        union_dict = {'region1': dict(), 'region2': dict(), 'region3': dict()}
+        union_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
 
         with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
             grammar_dict_1 = json.load(fin1)
@@ -191,20 +166,34 @@ class UnionDict:
         wb1_region1_values, wb1_region2_values, wb1_region3_values, wb1_region4_values = cls.__read_xlsx(xlsx_in_1)
         wb2_region1_values, wb2_region2_values, wb2_region3_values, wb2_region4_values = cls.__read_xlsx(xlsx_in_2)
 
-        for k in ['region1', 'region2', 'region3']:
+        for k in ['region1', 'region2_3', 'region4']:
             # sub_k is a grammar symbol, sub_v is the list of corresponding tuples in dict_1
             for sub_k, sub_v in grammar_dict_1.get(k, dict()).items():
                 tmp = set(sub_v)
                 tmp.update(grammar_dict_2.get(k, dict()).get(sub_k, list()))
                 union_list = list(tmp)
-                # v is a tuple in sub_v corresponding to the grammar symbol sub_k in region k
-                for v in sub_v:
-                    union_list = __manage_conflict(grammar_dict_1, k, sub_k, v, union_list, wb1_region1_values, wb1_region2_values,
-                                      wb1_region3_values, wb1_region4_values, wb2_region1_values, wb2_region2_values,
-                                      wb2_region3_values, wb2_region4_values)
-                    union_list =__manage_conflict(grammar_dict_2, k, sub_k, v, union_list, wb1_region1_values, wb1_region2_values,
-                                      wb1_region3_values, wb1_region4_values, wb2_region1_values, wb2_region2_values,
-                                      wb2_region3_values, wb2_region4_values)
+
+                for v in list(union_list):
+                    # Compute max weight for v in dict_1 and dict_2
+                    w1_max = cls.__get_max_weight(v, wb1_region1_values, wb1_region2_values, wb1_region3_values,
+                                                  wb1_region4_values)
+                    w2_max = cls.__get_max_weight(v, wb2_region1_values, wb2_region2_values, wb2_region3_values,
+                                                  wb2_region4_values)
+
+                    # k2 is a grammar symbol different form sub_k
+                    for k2 in [i for i in grammar_dict_1.get(k, dict()).keys() if i != sub_k]:
+                        # If v is associated to symbol k2 in region k of dict_1
+                        if v in grammar_dict_1.get(k, dict()).get(k2, list()):
+                            # Disassociate v from symbol sub_k if max_weight_1 > max_weight_2
+                            if w1_max > w2_max:
+                                if union_list.count(v) > 0:
+                                    union_list.remove(v)
+
+                    for k2 in [i for i in grammar_dict_2.get(k, dict()).keys() if i != sub_k]:
+                        if v in grammar_dict_2.get(k, dict()).get(k2, list()):
+                            if w1_max < w2_max:
+                                if union_list.count(v) > 0:
+                                    union_list.remove(v)
 
                 union_dict[k][sub_k] = union_list
 
