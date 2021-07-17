@@ -169,7 +169,7 @@ class GrammarWord:
                 else:
                     funny_letter = cls.__rho
 
-                    for letter, v in grammar_dict.get('region2', dict()).items():
+                    for letter, v in grammar_dict.get('region2_3', dict()).items():
                         if val in v:
                             funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
                             break
@@ -185,7 +185,7 @@ class GrammarWord:
                 else:
                     funny_letter = cls.__gamma
 
-                    for letter, v in grammar_dict.get('region3', dict()).items():
+                    for letter, v in grammar_dict.get('region4', dict()).items():
                         if val in v:
                             funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
                             break

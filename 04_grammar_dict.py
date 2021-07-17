@@ -72,6 +72,7 @@ class GrammarDict:
         'FORCE_GAMMA': __gamma
     }
 
+    # R2 in the script corresponds to patterns in region 2 (end of R-loop) and region 3 (beginning of R-loop)
     GREEK_MAPPING_R2 = {
         'W1': __tau,
         'W2': __tau,
@@ -83,6 +84,7 @@ class GrammarDict:
         'FORCE_RHO': __rho
     }
 
+    # R3 in script corresponds to patterns region 4 (before R-loop)
     GREEK_MAPPING_R3 = {
         'W1': __sigma_hat,
         'W2': __sigma_hat,
@@ -266,8 +268,8 @@ class GrammarDict:
         header = list()
 
         for k in sorted_keys:
-            header.extend((k + '_r1', k + '_r1_extra', k + '_r1_funny_letters', k + '_r2', k + '_r2_extra',
-                           k + '_r2_funny_letters', k + '_r3', k + '_r3_extra', k + '_r3_funny_letters'))
+            header.extend((k + '_r1', k + '_r1_extra', k + '_r1_funny_letters', k + '_r2_3', k + '_r2_3_extra',
+                           k + '_r2_3_funny_letters', k + '_r4', k + '_r4_extra', k + '_r4_funny_letters'))
 
             if len(header) >= max_cols:  # Check we do not have more than max cols allowed by Excel
                 break
@@ -328,8 +330,8 @@ class GrammarDict:
         counts = dict()
         grammar_dict = {'rloops': list(res.keys()),
                         'region1': dict(),
-                        'region2': dict(),
-                        'region3': dict()
+                        'region2_3': dict(),
+                        'region4': dict()
                         }
 
         while len(row) > 0 or i == 0:
@@ -494,16 +496,16 @@ class GrammarDict:
                 if r2_val and len(r2_val) == window_length and r2_funny_letters:
                     for letter in r2_funny_letters:
                         ascii_letter = cls.GREEK_TO_ASCII.get(letter, '?')
-                        items = set(grammar_dict['region2'].get(ascii_letter, list()))
+                        items = set(grammar_dict['region2_3'].get(ascii_letter, list()))
                         items.add(r2_val)
-                        grammar_dict['region2'][ascii_letter] = list(items)
+                        grammar_dict['region2_3'][ascii_letter] = list(items)
 
                 if r3_val and len(r3_val) == window_length and r3_funny_letters:
                     for letter in r3_funny_letters:
                         ascii_letter = cls.GREEK_TO_ASCII.get(letter, '?')
-                        items = set(grammar_dict['region3'].get(ascii_letter, list()))
+                        items = set(grammar_dict['region4'].get(ascii_letter, list()))
                         items.add(r3_val)
-                        grammar_dict['region3'][ascii_letter] = list(items)
+                        grammar_dict['region4'][ascii_letter] = list(items)
 
                 if r1_val:
                     r1_val = WriteOnlyCell(ws, value=r1_val)
