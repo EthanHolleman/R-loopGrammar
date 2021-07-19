@@ -137,8 +137,8 @@ class UnionDict:
                                     if i in list(r_dict_2.get(sub_k, dict()).keys())]
 
                     for funny in same_letters:
-                        # Collect both weights for sub_k
-                        # We retain info about different tuples corresponding to same symbol
+                        # Collect all weights for sub_k in dict_1 and dict_2
+                        # We retain info about tuples corresponding to same symbol in dict_1 and dict_2
                         r_dict_1[sub_k][funny].update(r_dict_2.get(sub_k, dict()).get(funny, dict()))
                         # Delete info for sub_k from dict_2
                         r_dict_2.get(sub_k, dict()).pop(funny)

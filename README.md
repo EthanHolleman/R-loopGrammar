@@ -129,16 +129,43 @@ Without threshold input file:
 `python3 04_grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra_training-set.bed -o pFC53_SUPERCOILED_DICT_FULL.xlsx -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight.xlsx -w 5`
 
 Using threshold input file:
-`python3 04_grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra_training-set.bed -o pFC53_SUPERCOILED_DICT_SHANNON.xlsx -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight.xlsx -t pFC53_SUPERCOILED_w5_weight_shannon.xlsx -w 5`
+`python3 04_grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra_training-set.bed -o pFC53_SUPERCOILED_DICT_SHANNON.xlsx -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight.xlsx -w 5 -t pFC53_SUPERCOILED_w5_weight_shannon.xlsx`
 
 
-# 05 Grammar Word
+# 05 Union Dict
+
+### Usage
+```text
+usage: 05_union_dict.py [-h] -j1 JSON1_IN_FILE -j2 JSON2_IN_FILE -x1
+                        XLSX1_IN_FILE -x2 XLSX2_IN_FILE [-o OUTPUT_PREFIX]
+
+Regions extractor
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -j1 JSON1_IN_FILE, --input-json-1 JSON1_IN_FILE
+                        First JSON input file
+  -j2 JSON2_IN_FILE, --input-json-2 JSON2_IN_FILE
+                        Second JSON input file
+  -x1 XLSX1_IN_FILE, --input-xlsx-1 XLSX1_IN_FILE
+                        First XLSX input file
+  -x2 XLSX2_IN_FILE, --input-xlsx-2 XLSX2_IN_FILE
+                        Second XLSX input file
+  -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
+                        Prefix for output JSON file
+```
+
+### Example
+`python3 05_union_dict.py -j1 pFC8_SUPERCOILED_DICT_FULL.xlsx.json -j2 pFC53_SUPERCOILED_DICT_FULL.xlsx.json -x1 pFC8_SUPERCOILED_w5_weight.xlsx -x2 pFC53_SUPERCOILED_w5_weight.xlsx -o pFC8-53_SUPERCOILED`
+
+
+# 06 Grammar Word
 ### Dependencies
 * [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
 
 ### Usage
 ```text
-usage: 05_grammar_word.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE -j JSON_IN_FILE
+usage: 06_grammar_word.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE -j JSON_IN_FILE
                           -s START_INDEX -e END_INDEX [-w WINDOW_LENGTH]
                           [-o OUTPUT_FILE]
 
@@ -163,7 +190,7 @@ optional arguments:
 ```
 
 ### Example
-`python3 grammar_word.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_WORDS_SHANNON.txt -s 1 -e 1929 -j pFC53_SUPERCOILED_DICT_SHANNON.xlsx.json -w 5`
+`python3 06_grammar_word.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_WORDS_SHANNON.txt -s 1 -e 1929 -j pFC53_SUPERCOILED_DICT_SHANNON.xlsx.json -w 5`
 
 
 # Regions Extractor
