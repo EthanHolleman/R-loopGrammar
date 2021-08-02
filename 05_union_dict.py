@@ -2,6 +2,7 @@
 import argparse
 import json
 import openpyxl
+import random
 
 """
 Script to calculate union and intersection of two dictionaries.
@@ -28,8 +29,28 @@ along with UnionDict.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class UnionDict:
+    # Works only if "i" is a basic type instance (str, int, ...)
+    # Item i is a tuple, d is the relocation dictionary
+    # Determine if item i appears somewhere in dict d
     @classmethod
+    def __item_in_dict(cls, i, d):
+        ret = False
+
+        for v in d.values():
+            if ret:
+                return True
+
+            if isinstance(v, dict):
+                return ret or cls.__item_in_dict(i, v)
+            elif isinstance(v, list):
+                ret = ret or i in v
+            else:
+                ret = ret or i == v
+
+        return ret
+
     # Reads tuples and corresponding weight in each region from the xlsx file
+    @classmethod
     def __read_xlsx(cls, xlsx_in):
         region1_values = dict()
         region2_values = dict()
@@ -157,6 +178,8 @@ class UnionDict:
     @classmethod
     # Determine union of two dictionaries
     def union_json(cls, json_in_1, json_in_2, xlsx_in_1, xlsx_in_2, output_prefix='out'):
+        # Dictionary for random choices of symbols when max_weight_1 = max_weight_2
+        random_relocation = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
         union_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
 
         with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
@@ -174,6 +197,8 @@ class UnionDict:
                 union_list = list(tmp)
 
                 for v in list(union_list):
+                    # Lottery for tuples having distinct symbols in dict_1 and dict_2 but same max weight
+                    funny_letters_lottery = {sub_k}
                     # Compute max weight for v in dict_1 and dict_2
                     w1_max = cls.__get_max_weight(v, wb1_region1_values, wb1_region2_values, wb1_region3_values,
                                                   wb1_region4_values)
@@ -184,17 +209,42 @@ class UnionDict:
                     for k2 in [i for i in grammar_dict_1.get(k, dict()).keys() if i != sub_k]:
                         # If v is associated to symbol k2 in region k of dict_1
                         if v in grammar_dict_1.get(k, dict()).get(k2, list()):
+                            if w1_max == w2_max:
+                                funny_letters_lottery.add(k2)
                             # Disassociate v from symbol sub_k if max_weight_1 > max_weight_2
-                            if w1_max > w2_max:
-                                if union_list.count(v) > 0:
-                                    union_list.remove(v)
+                            elif w1_max > w2_max and union_list.count(v) > 0:
+                                union_list.remove(v)
 
+                    # Same procedure as above, but for dict_2
                     for k2 in [i for i in grammar_dict_2.get(k, dict()).keys() if i != sub_k]:
                         if v in grammar_dict_2.get(k, dict()).get(k2, list()):
-                            if w1_max < w2_max:
-                                if union_list.count(v) > 0:
-                                    union_list.remove(v)
+                            if w1_max == w2_max:
+                                funny_letters_lottery.add(k2)
+                            elif w1_max < w2_max and union_list.count(v) > 0:
+                                union_list.remove(v)
 
+                    # If funny_letters_lottery contains more than one symbol, v is in the union, and v has not been
+                    # already relocated in region k: we do not remove v from union_list if max_weight_1 = max_weight_2,
+                    # so we don't want to relocate v again (once for every symbol associated to v)
+                    if len(funny_letters_lottery) > 1 and union_list.count(v) > 0 and \
+                            not cls.__item_in_dict(v, random_relocation.get(k, dict())):
+                        print(k + ': flip coin for ' + str(v) + ', symbols ' + str(list(funny_letters_lottery)) + '\n')
+                        # Pick one symbol randomly
+                        k2 = list(funny_letters_lottery)[random.randint(0, len(funny_letters_lottery) - 1)]
+                        # Add v to the list of tuples corresponding to k2 in relocation dict
+                        tmp_list = random_relocation[k].get(k2, list())
+                        tmp_list.append(v)
+                        random_relocation[k][k2] = tmp_list
+                        union_list.remove(v)
+
+                    # If we detect again a conflict but we have already relocated v, remove v from union
+                    if len(funny_letters_lottery) > 1 and union_list.count(v) > 0 and \
+                            cls.__item_in_dict(v, random_relocation.get(k, dict())):
+                        union_list.remove(v)
+
+                # If v is not associated with sub_k anymore, we will add it to the union when we consider
+                # its new symbol in relocation dict
+                union_list.extend(random_relocation[k].get(sub_k, list()))
                 union_dict[k][sub_k] = union_list
 
         with open(output_prefix + '_union.json', 'w') as fout:
