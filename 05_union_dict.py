@@ -49,8 +49,25 @@ class UnionDict:
 
         return ret
 
-    # Reads tuples and corresponding weight in each region from the xlsx file
     @classmethod
+    # Read line from input file
+    def __read_line_from_input_list(cls, fin, raise_error=True):
+        line = fin.readline()
+
+        if not line:
+            if raise_error:
+                raise AssertionError('Unexpected end of file')
+            return line
+
+        line = line.strip()
+
+        if not line or line.startswith('#'):
+            return cls.__read_line_from_input_list(fin, raise_error)
+
+        return line
+
+    @classmethod
+    # Reads tuples and corresponding weight in each region from the xlsx file
     def __read_xlsx(cls, xlsx_in):
         region1_values = dict()
         region2_values = dict()
@@ -83,72 +100,28 @@ class UnionDict:
         return max(cls.__get_weights(pattern, region1_values, region2_values, region3_values, region4_values))
 
     @classmethod
-    def get_args(cls):
-        parser = argparse.ArgumentParser(description='Regions extractor')
-        parser.add_argument('-j1', '--input-json-1', metavar='JSON1_IN_FILE', type=str, required=True,
-                            help='First JSON input file', default=None)
-        parser.add_argument('-j2', '--input-json-2', metavar='JSON2_IN_FILE', type=str, required=True,
-                            help='Second JSON input file', default=None)
-        parser.add_argument('-x1', '--input-xlsx-1', metavar='XLSX1_IN_FILE', type=str, required=True,
-                            help='First XLSX input file', default=None)
-        parser.add_argument('-x2', '--input-xlsx-2', metavar='XLSX2_IN_FILE', type=str, required=True,
-                            help='Second XLSX input file', default=None)
-        parser.add_argument('-o', '--output-prefix', metavar='OUTPUT_PREFIX', type=str, required=False,
-                            help='Prefix for output JSON file', default='output_prefix')
-        return parser.parse_args()
-
-    @classmethod
-    # Determine intersection for each grammar symbol in the same region
-    def intersect_symbol_json(cls, json_in_1, json_in_2, output_prefix='out'):
+    # Find tuples associated with same symbol in two dictionaries
+    def __intersect_symbol_json(cls, grammar_dict_1, grammar_dict_2):
         intersect_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
-
-        with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
-            grammar_dict_1 = json.load(fin1)
-            grammar_dict_2 = json.load(fin2)
 
         for k in ['region1', 'region2_3', 'region4']:
             # sub_k is a grammar symbol, sub_v is the list of corresponding tuples from dict_1
             for sub_k, sub_v in grammar_dict_1.get(k, dict()).items():
-                # Collect tuples in sub_v in dict_1 that appear also
+                # Collect tuples in sub_v in dict_1 that
                 # correspond to sub_k in dict_2
                 intersect_dict[k][sub_k] = [i for i in sub_v if i in grammar_dict_2.get(k, dict()).get(sub_k, list())]
 
-        with open(output_prefix + '_symbol_intersection.json', 'w') as fout:
-            json.dump(intersect_dict, fout)
+        return intersect_dict
 
     @classmethod
-    # Determine intersection across grammar symbols in the same region
-    def intersect_region_json(cls, json_in_1, json_in_2, xlsx_in_1, xlsx_in_2, output_prefix='out'):
-        def __get_r_dict(grammar_dict, region, region1_values, region2_values, region3_values, region4_values, w_key):
-            r_dict = dict()
-
-            # For tuples in the dictionary, take the corresponding weight in 'region' specified in input
-            for tmp_k, tmp_v in grammar_dict.get(region, dict()).items():
-                for v in tmp_v:
-                    w1, w2, w3, w4 = cls.__get_weights(v, region1_values, region2_values, region3_values,
-                                                       region4_values)
-                    weights = {'r1_weight': w1, 'r2_weight': w2, 'r3_weight': w3, 'r4_weight': w4}
-
-                    # dictionary: {tuple v : {grammar symbol in dictionary : {file_number : {r1: weight, ...}}}}
-                    r_dict[v] = {tmp_k: {w_key: weights}}
-
-            return r_dict
-
+    # Intersection across regions: find tuples appearing in both dicts and collect their symbols (may be equal or not)
+    def __intersect_region_json(cls, full_r_dict_1, full_r_dict_2):
         intersect_region_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
-
-        with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
-            grammar_dict_1 = json.load(fin1)
-            grammar_dict_2 = json.load(fin2)
-
-        wb1_region1_values, wb1_region2_values, wb1_region3_values, wb1_region4_values = cls.__read_xlsx(xlsx_in_1)
-        wb2_region1_values, wb2_region2_values, wb2_region3_values, wb2_region4_values = cls.__read_xlsx(xlsx_in_2)
 
         for k in ['region1', 'region2_3', 'region4']:
             # For region k and for each tuple in k, create dictionary specifying the grammar symbol, weight, file_number
-            r_dict_1 = __get_r_dict(grammar_dict_1, k, wb1_region1_values, wb1_region2_values, wb1_region3_values,
-                                    wb1_region4_values, 'file1')
-            r_dict_2 = __get_r_dict(grammar_dict_2, k, wb2_region1_values, wb2_region2_values, wb2_region3_values,
-                                    wb2_region4_values, 'file2')
+            r_dict_1 = full_r_dict_1.get(k, dict())
+            r_dict_2 = full_r_dict_2.get(k, dict())
 
             for sub_k in list(r_dict_1.keys()):  # For tuple sub_k in region k from dict_1
                 # Check if tuple sub_k appears in the tuples from dict_2
@@ -172,22 +145,15 @@ class UnionDict:
 
             intersect_region_dict[k] = r_dict_1
 
-        with open(output_prefix + '_region_intersection.json', 'w') as fout:
-            json.dump(intersect_region_dict, fout)
+        return intersect_region_dict
 
     @classmethod
-    # Determine union of two dictionaries
-    def union_json(cls, json_in_1, json_in_2, xlsx_in_1, xlsx_in_2, output_prefix='out'):
+    # Compute union for two dictionaries
+    def __union_json(cls, grammar_dict_1, grammar_dict_2, weights_1, weights_2):
         # Dictionary for random choices of symbols when max_weight_1 = max_weight_2
         random_relocation = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
         union_dict = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
-
-        with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
-            grammar_dict_1 = json.load(fin1)
-            grammar_dict_2 = json.load(fin2)
-
-        wb1_region1_values, wb1_region2_values, wb1_region3_values, wb1_region4_values = cls.__read_xlsx(xlsx_in_1)
-        wb2_region1_values, wb2_region2_values, wb2_region3_values, wb2_region4_values = cls.__read_xlsx(xlsx_in_2)
+        union_weights_dict = {'r1': dict(), 'r2': dict(), 'r3': dict(), 'r4': dict()}
 
         for k in ['region1', 'region2_3', 'region4']:
             # sub_k is a grammar symbol, sub_v is the list of corresponding tuples in dict_1
@@ -200,10 +166,10 @@ class UnionDict:
                     # Lottery for tuples having distinct symbols in dict_1 and dict_2 but same max weight
                     funny_letters_lottery = {sub_k}
                     # Compute max weight for v in dict_1 and dict_2
-                    w1_max = cls.__get_max_weight(v, wb1_region1_values, wb1_region2_values, wb1_region3_values,
-                                                  wb1_region4_values)
-                    w2_max = cls.__get_max_weight(v, wb2_region1_values, wb2_region2_values, wb2_region3_values,
-                                                  wb2_region4_values)
+                    w1_max = cls.__get_max_weight(v, weights_1.get('r1', dict()), weights_1.get('r2', dict()),
+                                                  weights_1.get('r3', dict()), weights_1.get('r4', dict()))
+                    w2_max = cls.__get_max_weight(v, weights_2.get('r1', dict()), weights_2.get('r2', dict()),
+                                                  weights_2.get('r3', dict()), weights_2.get('r4', dict()))
 
                     # k2 is a grammar symbol different form sub_k
                     for k2 in [i for i in grammar_dict_1.get(k, dict()).keys() if i != sub_k]:
@@ -223,7 +189,7 @@ class UnionDict:
                             elif w1_max < w2_max and union_list.count(v) > 0:
                                 union_list.remove(v)
 
-                    # If funny_letters_lottery contains more than one symbol, v is in the union, and v has not been
+                    # If funny_letters_lottery contains more than one symbol, and v is in the union, and v has not been
                     # already relocated in region k: we do not remove v from union_list if max_weight_1 = max_weight_2,
                     # so we don't want to relocate v again (once for every symbol associated to v)
                     if len(funny_letters_lottery) > 1 and union_list.count(v) > 0 and \
@@ -247,17 +213,176 @@ class UnionDict:
                 union_list.extend(random_relocation[k].get(sub_k, list()))
                 union_dict[k][sub_k] = union_list
 
+            # Need to keep info about weights of the tuples appearing in union dict
+            for values in union_dict.get(k, dict()).values():
+                # v is a tuple, values is a list of tuples corresponding to a grammar symbol in region k
+                for v in values:
+                    if k.endswith('1'):
+                        # Take max weight for v in region 1 for the given two dicts
+                        union_weights_dict['r1'][v] = max(cls.__get_max_weight(v, weights_1.get('r1', dict()), dict(),
+                                                                               dict(), dict()),
+                                                          cls.__get_max_weight(v, weights_2.get('r1', dict()), dict(),
+                                                                               dict(), dict()))
+                    elif k.endswith('2_3'):
+                        # Take max weight for v in region 2 and 3 for the given two dicts
+                        union_weights_dict['r2'][v] = max(cls.__get_max_weight(v, dict(), weights_1.get('r2', dict()),
+                                                                               weights_1.get('r3', dict()), dict()),
+                                                          cls.__get_max_weight(v, dict(), weights_2.get('r2', dict()),
+                                                                               weights_2.get('r3', dict()), dict()))
+                    else:
+                        # Take max weight for v in region 4 for the given two dicts
+                        union_weights_dict['r4'][v] = max(cls.__get_max_weight(v, dict(), dict(), dict(),
+                                                                               weights_1.get('r4', dict())),
+                                                          cls.__get_max_weight(v, dict(), dict(), dict(),
+                                                                               weights_2.get('r4', dict())))
+
+                # For simplicity, weights in region 2 and 3 are equal after union
+                union_weights_dict['r3'] = dict(union_weights_dict.get('r2', dict()))
+
+        return union_dict, union_weights_dict
+
+    @classmethod
+    def get_args(cls):
+        parser = argparse.ArgumentParser(description='Union dict')
+        parser.add_argument('-i', '--input-file-list', metavar='INPUT_FILE_LIST', type=str, required=True,
+                            help='Text file containing input files (one per line)', default=None)
+        parser.add_argument('-o', '--output-prefix', metavar='OUTPUT_PREFIX', type=str, required=False,
+                            help='Prefix for output JSON file', default='output_prefix')
+        return parser.parse_args()
+
+    @classmethod
+    # Find tuples associated with same symbol for input dictionaries
+    def intersect_symbol_json(cls, file_list_in, output_prefix='out'):
+        with open(file_list_in, 'r') as fin:
+            json_in_1 = cls.__read_line_from_input_list(fin)
+            # Skip line about XLSX
+            cls.__read_line_from_input_list(fin)
+            json_in_2 = cls.__read_line_from_input_list(fin)
+            cls.__read_line_from_input_list(fin)
+
+            with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
+                grammar_dict_1 = json.load(fin1)
+                grammar_dict_2 = json.load(fin2)
+
+            intersect_dict = cls.__intersect_symbol_json(grammar_dict_1, grammar_dict_2)
+            # Take next dict
+            json_in_2 = cls.__read_line_from_input_list(fin, False)
+
+            # Repeat for all other input files
+            while json_in_2:
+                with open(json_in_2, 'r') as fin1:
+                    grammar_dict_2 = json.load(fin1)
+
+                intersect_dict = cls.__intersect_symbol_json(intersect_dict, grammar_dict_2)
+
+                cls.__read_line_from_input_list(fin)
+                json_in_2 = cls.__read_line_from_input_list(fin, False)
+
+        with open(output_prefix + '_symbol_intersection.json', 'w') as fout:
+            json.dump(intersect_dict, fout)
+
+    @classmethod
+    # Intersection across regions for input dictionaries
+    def intersect_region_json(cls, file_list_in, output_prefix='out'):
+        # Create dict with tuple info
+        def __get_r_dict(grammar_dict, region, region1_values, region2_values, region3_values, region4_values, w_key):
+            r_dict = dict()
+
+            # For tuples in the dictionary, take the corresponding weight in 'region' specified in input
+            for tmp_k, tmp_v in grammar_dict.get(region, dict()).items():
+                for v in tmp_v:
+                    w1, w2, w3, w4 = cls.__get_weights(v, region1_values, region2_values, region3_values,
+                                                       region4_values)
+                    weights = {'r1_weight': w1, 'r2_weight': w2, 'r3_weight': w3, 'r4_weight': w4}
+
+                    # dictionary: {tuple v : {grammar symbol in dictionary : {file_number : {r1: weight, ...}}}}
+                    r_dict[v] = {tmp_k: {w_key: weights}}
+
+            return r_dict
+
+        with open(file_list_in, 'r') as fin:
+            json_in_1 = cls.__read_line_from_input_list(fin)
+            xlsx_in_1 = cls.__read_line_from_input_list(fin)
+            json_in_2 = cls.__read_line_from_input_list(fin)
+            xlsx_in_2 = cls.__read_line_from_input_list(fin)
+
+            with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
+                grammar_dict_1 = json.load(fin1)
+                grammar_dict_2 = json.load(fin2)
+
+            wb1_r1_values, wb1_r2_values, wb1_r3_values, wb1_r4_values = cls.__read_xlsx(xlsx_in_1)
+            wb2_r1_values, wb2_r2_values, wb2_r3_values, wb2_r4_values = cls.__read_xlsx(xlsx_in_2)
+            full_r_dict_1 = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
+            full_r_dict_2 = {'region1': dict(), 'region2_3': dict(), 'region4': dict()}
+
+            for k in ['region1', 'region2_3', 'region4']:
+                # For region k and for each tuple in k, create dict specifying the grammar symbol, weight, file_number
+                full_r_dict_1[k] = __get_r_dict(grammar_dict_1, k, wb1_r1_values, wb1_r2_values, wb1_r3_values,
+                                                wb1_r4_values, 'file1')
+                full_r_dict_2[k] = __get_r_dict(grammar_dict_2, k, wb2_r1_values, wb2_r2_values, wb2_r3_values,
+                                                wb2_r4_values, 'file2')
+
+            intersect_region_dict = cls.__intersect_region_json(full_r_dict_1, full_r_dict_2)
+            json_in_2 = cls.__read_line_from_input_list(fin, False)
+
+            while json_in_2:
+                with open(json_in_2, 'r') as fin1:
+                    grammar_dict_2 = json.load(fin1)
+
+                xlsx_in_2 = cls.__read_line_from_input_list(fin)
+                wb2_r1_values, wb2_r2_values, wb2_r3_values, wb2_r4_values = cls.__read_xlsx(xlsx_in_2)
+
+                for k in ['region1', 'region2_3', 'region4']:
+                    # For region k and for each tuple in k, create dict specifying the grammar symbol,weight,file_number
+                    full_r_dict_2[k] = __get_r_dict(grammar_dict_2, k, wb2_r1_values, wb2_r2_values, wb2_r3_values,
+                                                    wb2_r4_values, 'file2')
+
+                intersect_region_dict = cls.__intersect_region_json(intersect_region_dict, full_r_dict_2)
+
+                json_in_2 = cls.__read_line_from_input_list(fin, False)
+
+        with open(output_prefix + '_region_intersection.json', 'w') as fout:
+            json.dump(intersect_region_dict, fout)
+
+    @classmethod
+    # Compute union for input dictionaries
+    def union_json(cls, file_list_in, output_prefix='out'):
+        with open(file_list_in, 'r') as fin:
+            json_in_1 = cls.__read_line_from_input_list(fin)
+            xlsx_in_1 = cls.__read_line_from_input_list(fin)
+            json_in_2 = cls.__read_line_from_input_list(fin)
+            xlsx_in_2 = cls.__read_line_from_input_list(fin)
+
+            with open(json_in_1, 'r') as fin1, open(json_in_2, 'r') as fin2:
+                grammar_dict_1 = json.load(fin1)
+                grammar_dict_2 = json.load(fin2)
+
+            wb1_r1_values, wb1_r2_values, wb1_r3_values, wb1_r4_values = cls.__read_xlsx(xlsx_in_1)
+            weights_1 = {'r1': wb1_r1_values, 'r2': wb1_r2_values, 'r3': wb1_r3_values, 'r4': wb1_r4_values}
+            wb2_r1_values, wb2_r2_values, wb2_r3_values, wb2_r4_values = cls.__read_xlsx(xlsx_in_2)
+            weights_2 = {'r1': wb2_r1_values, 'r2': wb2_r2_values, 'r3': wb2_r3_values, 'r4': wb2_r4_values}
+
+            union_dict, union_dict_weights = cls.__union_json(grammar_dict_1, grammar_dict_2, weights_1, weights_2)
+            json_in_2 = cls.__read_line_from_input_list(fin, False)
+
+            while json_in_2:
+                with open(json_in_2, 'r') as fin1:
+                    grammar_dict_2 = json.load(fin1)
+
+                xlsx_in_2 = cls.__read_line_from_input_list(fin)
+                wb2_r1_values, wb2_r2_values, wb2_r3_values, wb2_r4_values = cls.__read_xlsx(xlsx_in_2)
+                weights_2 = {'r1': wb2_r1_values, 'r2': wb2_r2_values, 'r3': wb2_r3_values, 'r4': wb2_r4_values}
+                union_dict, union_dict_weights = cls.__union_json(union_dict, grammar_dict_2, union_dict_weights,
+                                                                  weights_2)
+
+                json_in_2 = cls.__read_line_from_input_list(fin, False)
+
         with open(output_prefix + '_union.json', 'w') as fout:
             json.dump(union_dict, fout)
 
 
 if __name__ == '__main__':
     args = vars(UnionDict.get_args())
-    UnionDict.intersect_symbol_json(args.get('input_json_1', None), args.get('input_json_2', None),
-                                    args.get('output_prefix', 'out'))
-    UnionDict.intersect_region_json(args.get('input_json_1', None), args.get('input_json_2', None),
-                                    args.get('input_xlsx_1', None), args.get('input_xlsx_2', None),
-                                    args.get('output_prefix', 'out'))
-    UnionDict.union_json(args.get('input_json_1', None), args.get('input_json_2', None),
-                         args.get('input_xlsx_1', None), args.get('input_xlsx_2', None),
-                         args.get('output_prefix', 'out'))
+    UnionDict.intersect_symbol_json(args.get('input_file_list', None), args.get('output_prefix', 'out'))
+    UnionDict.intersect_region_json(args.get('input_file_list', None), args.get('output_prefix', 'out'))
+    UnionDict.union_json(args.get('input_file_list', None), args.get('output_prefix', 'out'))
