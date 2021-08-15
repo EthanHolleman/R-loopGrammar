@@ -9,20 +9,20 @@ Script to generated words for R-loops in a BED file using a dictionary.
 Copyright 2020 Margherita Maria Ferrari.
 
 
-This file is part of GrammarSymbols.
+This file is part of GrammarWord.
 
-GrammarSymbols is free software: you can redistribute it and/or modify
+GrammarWord is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-GrammarSymbols is distributed in the hope that it will be useful,
+GrammarWord is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with GrammarSymbols.  If not, see <http://www.gnu.org/licenses/>.
+along with GrammarWord.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 
@@ -75,7 +75,7 @@ class GrammarWord:
 
     @classmethod
     def get_args(cls):
-        parser = argparse.ArgumentParser(description='Regions extractor')
+        parser = argparse.ArgumentParser(description='Grammar word')
         parser.add_argument('-f', '--input-fasta', metavar='FASTA_IN_FILE', type=str, required=True,
                             help='FASTA input file', default=None)
         parser.add_argument('-b', '--input-bed', metavar='BED_IN_FILE', type=str, required=True,
