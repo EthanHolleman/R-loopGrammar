@@ -1,3 +1,26 @@
+# 00 Convert Coord
+
+### Usage
+```text
+usage: 00_convert_coordinates.py [-h] -b BED_IN_FILE -l LENGTH_PLASMID
+                                 [-o OUTPUT_FILE]
+
+Convert coord
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b BED_IN_FILE, --input-bed BED_IN_FILE
+                        BED input file
+  -l LENGTH_PLASMID, --length-plasmid LENGTH_PLASMID
+                        Length of the plasmid
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Output BED file
+```
+
+### Example
+`python3 00_convert_coordinates.py -b pFC53_SUPERCOILED.bed -l 3906 -o new_pFC53_SUPERCOILED.bed`
+
+
 # 01 Regions Extractor
 ### Dependencies
 * [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
@@ -133,35 +156,36 @@ Using threshold input file:
 
 
 # 05 Union Dict
+### Dependencies
+* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
 
 ### Usage
 ```text
-usage: 05_union_dict.py [-h] -j1 JSON1_IN_FILE -j2 JSON2_IN_FILE -x1
-                        XLSX1_IN_FILE -x2 XLSX2_IN_FILE [-o OUTPUT_PREFIX]
+usage: 05_union_dict.py [-h] -i INPUT_FILE_LIST [-o OUTPUT_PREFIX]
 
-Regions extractor
+Union dict
 
 optional arguments:
   -h, --help            show this help message and exit
-  -j1 JSON1_IN_FILE, --input-json-1 JSON1_IN_FILE
-                        First JSON input file
-  -j2 JSON2_IN_FILE, --input-json-2 JSON2_IN_FILE
-                        Second JSON input file
-  -x1 XLSX1_IN_FILE, --input-xlsx-1 XLSX1_IN_FILE
-                        First XLSX input file
-  -x2 XLSX2_IN_FILE, --input-xlsx-2 XLSX2_IN_FILE
-                        Second XLSX input file
+  -i INPUT_FILE_LIST, --input-file-list INPUT_FILE_LIST
+                        Text file containing input files (one per line)
   -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
                         Prefix for output JSON file
 ```
 
 ### Example
-`python3 05_union_dict.py -j1 pFC8_SUPERCOILED_DICT_FULL.xlsx.json -j2 pFC53_SUPERCOILED_DICT_FULL.xlsx.json -x1 pFC8_SUPERCOILED_w5_weight.xlsx -x2 pFC53_SUPERCOILED_w5_weight.xlsx -o pFC8-53_SUPERCOILED`
+`python3 05_union_dict.py -i dictionary_info.txt -o dictionary`
 
+### Input Format
+The input file must be a text file with the following structure:
+```text
+pFC8_SUPERCOILED_DICT.xlsx.json
+pFC8_SUPERCOILED_w5_weight.xlsx
+pFC53_SUPERCOILED_DICT.xlsx.json
+pFC53_SUPERCOILED_w5_weight.xlsx
+```
 
 # 06 Grammar Word
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
 
 ### Usage
 ```text
