@@ -69,6 +69,7 @@ def main():
     parser.add_argument('-b', '--bed_file', metavar='BED_FILE', type=str, help='bed file to read', required=True)
     parser.add_argument('-f', '--fasta_file', metavar='FASTA_FILE', type=str, help='fasta file to read', required=True)
     parser.add_argument('-w', '--width', metavar='WIDTH', type=int, help='n-tuple size', required=True)
+    parser.add_argument('-p', '--padding', metavar='PADDING', type=int, help='padding size', required=True)
 
     args = parser.parse_args()
     with open(args.bed_file, 'r') as bed_file:
@@ -82,7 +83,7 @@ def main():
     ntuples = set()
 
     for genomic_region in bed_reader.genomic_regions:
-        ntuples |= get_all_ntuples(sequence, genomic_region.start, genomic_region.end, args.width, 20)
+        ntuples |= get_all_ntuples(sequence, genomic_region.start, genomic_region.end, args.width, args.padding)
 
     print(len(ntuples))
     print(len(ntuples) / (4 ** args.width))
