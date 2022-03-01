@@ -6,13 +6,15 @@ For each R-Loop in the bed file (bed_extra.bed) the plasmid's sequence is partit
 
 *We trim the sequence from the FASTA file to match the sequence of the gene.*
 
+**TODO: INVESTIGATE START AND END, 0 BASED?**
+
 Let `sequence = sequence[gene_start:gene_end]`
 
 For each genomic region,
 
 - **Before** consists of `sequence[0:start]`
 - **Inside** consists of `sequence[start:end]`
-- **After** conists of `sequence[end:]`
+- **After** consists of `sequence[end:]`
 
 We then also make note of the reverse of each of these parsing blocks, **Before-Reversed**, **Inside-Reversed**, and **After-Reversed**.
 
@@ -25,6 +27,8 @@ The value of each key, being a object consistening of every possible contiguous 
 For example, suppose we have the sequence 
 
 `ATCGATCGATCGATCG`
+
+**TODO: (N % n-tuple_size != 0) NUMBER OF CHARACTERS**
 
  with n-tuple size 2, and and start and end starting at 8 to 12.
 
