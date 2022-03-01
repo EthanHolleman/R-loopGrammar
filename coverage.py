@@ -1,8 +1,13 @@
 import argparse
 
+from matplotlib import pyplot
+from collections import defaultdict
+
 from typing import *
 
 PROGRAM_DESCRIPTION = "Find coverage"
+TABLE_NTUPLES_PER_LINE = 5
+MAX_NTUPLES_TO_DISPLAY = TABLE_NTUPLES_PER_LINE * 5
 
 class GenomicRegion:
     def __init__(self, scaffold: str, start: int, end: int, *optional: List[any]):
@@ -37,14 +42,14 @@ def get_all_ntuples(sequence, start, end, window_length, padding):
     start_second_region = end - window_length if end - window_length >= 0 else 0
     end_second_region = end + window_length if end + window_length <= len(sequence) else len(sequence)
 
-    sequences = set()
+    sequences = list()
 
     start_region = sequence[start_first_region - padding:end_first_region + padding]
     end_region = sequence[start_second_region - padding:end_second_region + padding]
 
     for i in range(0, len(start_region) - window_length + 1):
-        sequences.add(start_region[i: i + window_length])
-        sequences.add(end_region[i: i + window_length])
+        sequences.append(start_region[i: i + window_length])
+        sequences.append(end_region[i: i + window_length])
 
     return sequences
 
@@ -80,14 +85,39 @@ def main():
     with open(args.fasta_file, 'r') as fasta_file:
         sequence = fasta_file.read()
 
-    ntuples = set()
+    ntuples_unqiue = set()
+    ntuple_frequency = defaultdict(lambda: 0)
 
     for genomic_region in bed_reader.genomic_regions:
-        ntuples |= get_all_ntuples(sequence, genomic_region.start, genomic_region.end, args.width, args.padding)
+        ntuples_all = get_all_ntuples(sequence, genomic_region.start, genomic_region.end, args.width, args.padding)
+        ntuples_unqiue |= set(ntuples_all)
 
-    print(len(ntuples))
-    print(len(ntuples) / (4 ** args.width))
+        for ntuple in ntuples_all:
+            ntuple_frequency[ntuple] += 1
 
+    reversed_order_ntuple_frequency = {
+        k : v for k, v in sorted(ntuple_frequency.items(), key=lambda x: x[1], reverse=True)
+    }
+
+    print("Number of unique n-tuples:", len(ntuples_unqiue))
+    print("Coverage based on all possible n-tuples:", len(ntuples_unqiue) / (4 ** args.width))
+
+    table = pyplot.table(
+        cellText = [
+            list(reversed_order_ntuple_frequency.items())[x:x + TABLE_NTUPLES_PER_LINE] \
+                for x in range(0, MAX_NTUPLES_TO_DISPLAY, TABLE_NTUPLES_PER_LINE)
+        ],
+        loc = 'bottom',
+        bbox = [0, -0.3, 1, 0.2]
+    )
+
+    pyplot.subplots_adjust(bottom=0.2)
+    pyplot.tight_layout(pad=3.0)
+    pyplot.title("frequency vs. ntuple")
+
+    pyplot.plot(reversed_order_ntuple_frequency.values())
+    pyplot.ylabel("frequency of ntuple")
+    pyplot.show()
 
 if __name__ == "__main__":
     main()
