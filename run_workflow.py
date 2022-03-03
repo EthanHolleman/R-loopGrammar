@@ -77,7 +77,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         start_index,
         end_index,
         window_length,
-    weight_xlsx_filename,
+        weight_xlsx_filename,
         4,
         padding=padding_length,
         bed_extra=True,
