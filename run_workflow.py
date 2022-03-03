@@ -22,7 +22,7 @@ probabilistic_language = importlib.import_module("07_probabilistic_language")
 in_loop_probs = importlib.import_module("08_in_loop_probs")
 
 PLASMID = "pFC53"
-WINDOW_LENGTH = 3
+WINDOW_LENGTH = 5
 TRAINING_SET_LINES = 63
 START_INDEX = 1
 END_INDEX = 1929
@@ -174,6 +174,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
 
 
 def main() -> None:
+    """
     runs = [
         WorkflowParameters(
             r,
@@ -188,6 +189,19 @@ def main() -> None:
 
     with multiprocessing.Pool(1) as pool:
         pool.map(do_workflow, runs)
+    """
+
+    for r in range(10):
+        for p in [15]:
+            do_workflow(WorkflowParameters(
+                r,
+                PLASMID,
+                WINDOW_LENGTH,
+                p,
+                TRAINING_SET_LINES,
+                START_INDEX,
+                END_INDEX
+            ))
 
 
 if __name__ == "__main__":
