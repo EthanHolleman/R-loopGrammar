@@ -22,10 +22,12 @@ probabilistic_language = importlib.import_module("07_probabilistic_language")
 in_loop_probs = importlib.import_module("08_in_loop_probs")
 
 PLASMID = "pFC53"
-WINDOW_LENGTH = 5
+WINDOW_LENGTH = 3
 TRAINING_SET_LINES = 63
 START_INDEX = 1
 END_INDEX = 1929
+NUMBER_OF_RUNS = 10
+PADDINGS = [12, 15, 18]
 
 class SupressOutput:
     def __init__(self):
@@ -71,6 +73,8 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     prob_lang_filename = f"{plasmid}_SHANNON_p{padding_length}_w{window_length}_{run_number}_prob_lang.py"
     base_in_loop_no_xlsx = f"{plasmid}_SHANNON_p{padding_length}_w{window_length}_{run_number}_base_in_loop"
 
+    # ADJUST BED FILE, THEN USE TRAINING SET BED FILE INSTEAD OF ENTIRE BED_EXTRA FILE.
+
     region_extractor.RegionsExtractor.extract_regions(
         f"{plasmid}.fa",
         f"{plasmid}_SUPERCOILED.bed",
@@ -115,7 +119,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         print(f"[{padding_length}] Extracting all words...")
         grammar_word.GrammarWord.extract_word(
             f"{plasmid}.fa",
-            f"{plasmid}_all_rloops.bed",
+            f"{plasmid}_w{window_length}_all_rloops.bed",
             dict_shannon_json_filename,
             start_index,
             end_index,
@@ -191,8 +195,15 @@ def main() -> None:
         pool.map(do_workflow, runs)
     """
 
-    for r in range(10):
-        for p in [15]:
+    with open(f"{PLASMID}_w{window_length}_rloops.bed", "w") as file_handle:
+        for x in range(80 + WINDOW_LENGTH, 1829 - 2 * WINDOW_LENGTH):
+            for y in range(x + WINDOW_LENGTH, 1829 - WINDOW_LENGTH):
+                if (y - x) % WINDOW_LENGTH == 0:
+                    file_handle.write(f"{PLASMID}\t{x}\t{y}\n")
+
+
+    for r in range(NUMBER_OF_RUNS):
+        for p in PADDINGS:
             do_workflow(WorkflowParameters(
                 r,
                 PLASMID,
