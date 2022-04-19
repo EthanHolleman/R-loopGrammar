@@ -21,13 +21,13 @@ grammar_training = importlib.import_module("06_grammar_training")
 probabilistic_language = importlib.import_module("07_probabilistic_language")
 in_loop_probs = importlib.import_module("08_in_loop_probs")
 
-PLASMID = "pFC53"
+PLASMID = "pFC8"
 WINDOW_LENGTH = 3
 TRAINING_SET_LINES = 63
-START_INDEX = 1
-END_INDEX = 1929
-NUMBER_OF_RUNS = 10
-PADDINGS = [12, 15, 18]
+START_INDEX = 80
+END_INDEX = 1512
+NUMBER_OF_RUNS = 5
+PADDINGS = [12, 15, 9, 6, 18]
 
 class SupressOutput:
     def __init__(self):
@@ -141,6 +141,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     print(f"[{padding_length}] Finding probabilities...")
     grammar_training.GrammarTraining.find_probabilities(
         training_set_words_filename,
+        window_length,
         probabilities_filename
     )
 
@@ -150,6 +151,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         probabilistic_language.Probabilistic_Language.word_probabilities(
             all_rloops_filename, # Probably don't need multiple copies of this?
             probabilities_filename_no_py,
+            window_length,
             prob_lang_filename
         )
 
@@ -158,8 +160,10 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     with SupressOutput():
         in_loop_probs.Loop_probabilities.in_loop_probabilities(
             all_rloops_filename,
+            f"{plasmid}_w{window_length}_all_rloops.bed",
             end_index - start_index,
             prob_lang_filename,
+            window_length,
             base_in_loop_no_xlsx
         )
 
@@ -178,7 +182,12 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
 
 
 def main() -> None:
-    """
+    with open(f"{PLASMID}_w{WINDOW_LENGTH}_all_rloops.bed", "w") as file_handle:
+        for x in range(80 + WINDOW_LENGTH, 1829 - 2 * WINDOW_LENGTH):
+            for y in range(x + WINDOW_LENGTH, 1829 - WINDOW_LENGTH):
+                if (y - x) % WINDOW_LENGTH == 0:
+                    file_handle.write(f"{PLASMID}\t{x}\t{y}\n")
+
     runs = [
         WorkflowParameters(
             r,
@@ -188,20 +197,13 @@ def main() -> None:
             TRAINING_SET_LINES,
             START_INDEX,
             END_INDEX
-        ) for r in range(10) for p in [15]
+        ) for r in range(NUMBER_OF_RUNS) for p in PADDINGS
     ]
 
-    with multiprocessing.Pool(1) as pool:
+    with multiprocessing.Pool(5) as pool:
         pool.map(do_workflow, runs)
-    """
 
-    with open(f"{PLASMID}_w{window_length}_rloops.bed", "w") as file_handle:
-        for x in range(80 + WINDOW_LENGTH, 1829 - 2 * WINDOW_LENGTH):
-            for y in range(x + WINDOW_LENGTH, 1829 - WINDOW_LENGTH):
-                if (y - x) % WINDOW_LENGTH == 0:
-                    file_handle.write(f"{PLASMID}\t{x}\t{y}\n")
-
-
+"""
     for r in range(NUMBER_OF_RUNS):
         for p in PADDINGS:
             do_workflow(WorkflowParameters(
@@ -213,7 +215,7 @@ def main() -> None:
                 START_INDEX,
                 END_INDEX
             ))
-
+"""
 
 if __name__ == "__main__":
     main()

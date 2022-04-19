@@ -25,28 +25,6 @@ You should have received a copy of the GNU General Public License
 along with GrammarWord.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys
-
-def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
-    size = sys.getsizeof(obj)
-    if seen is None:
-        seen = set()
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    # Important mark as seen *before* entering recursion to gracefully handle
-    # self-referential objects
-    seen.add(obj_id)
-    if isinstance(obj, dict):
-        size += sum([get_size(v, seen) for v in obj.values()])
-        size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__dict__'):
-        size += get_size(obj.__dict__, seen)
-    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([get_size(i, seen) for i in obj])
-    return size
-
 
 class GrammarWord:
     __alpha = '\u03B1'
@@ -123,105 +101,98 @@ class GrammarWord:
 
         gene_seq = gene_seq[start_idx:end_idx]
 
-        with open(bed_in, 'r') as fin:
-            line = fin.readline()
-
-            i = 1  # We keep track of the row we are reading in the BED file
-            while line:
-                parts = line.strip().split('\t')
-                idx_1 = int(parts[1])
-                idx_2 = int(parts[2])
-
-                r1, r2, r3 = cls.__get_regions(gene_seq, idx_1 - start_idx, idx_2 - start_idx)
-                r1_rev = r1[::-1]
-                r2_rev = r2[::-1]
-                r3_rev = r3[::-1]
-
-                # res contains info from all the R-loops in BED file
-                res[str(idx_1) + '_' + str(idx_2) + '_' + str(i)] = {'r1': [r1[i:i + window_length] for
-                                                                            i in range(0, len(r1), window_length)],
-                                                                     'r1_rev': [r1_rev[i:i + window_length][::-1] for i
-                                                                                in range(0, len(r1), window_length)],
-                                                                     'r2': [r2[i:i + window_length] for
-                                                                            i in range(0, len(r2), window_length)],
-                                                                     'r2_rev': [r2_rev[i:i + window_length][::-1] for i
-                                                                                in range(0, len(r2), window_length)],
-                                                                     'r3': [r3[i:i + window_length] for
-                                                                            i in range(0, len(r3), window_length)],
-                                                                     'r3_rev': [r3_rev[i:i + window_length][::-1] for i
-                                                                                in range(0, len(r3), window_length)]
-                                                                     }
-                line = fin.readline()
-                i += 1
-
+        word_dict = dict()
 
         with open(json_in, 'r') as fin:
             grammar_dict = json.load(fin)
 
-        sorted_keys = list(res.keys())  # Need sorted keys bc we iterate on them (if not ordered, result not consistent)
-        sorted_keys.sort(key=cls.__get_order_key)
-        word_dict = dict()
-
-        for k in sorted_keys:
-            if not word_dict.get(k, None):
-                word_dict[k] = {'r1_funny_letters': list(), 'r2_funny_letters': list(), 'r3_funny_letters': list()}
-
-            last_val = None
-            for val in res[k]['r1']:
-                last_val = val
-
-                if len(val) != window_length:
-                    funny_letter = cls.__omega + str(len(val))
-                else:
-                    funny_letter = cls.__gamma
-
-                    for letter, v in grammar_dict.get('region1', dict()).items():
-                        if val in v:
-                            funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
-                            break
-
-                word_dict[k]['r1_funny_letters'].append(funny_letter)
-
-            if last_val and len(last_val) == window_length:
-                word_dict[k]['r1_funny_letters'][-1] = word_dict[k]['r1_funny_letters'][-1] + cls.__omega + '0'
-
-            for val in res[k]['r2_rev']:
-                if len(val) != window_length:
-                    funny_letter = '?' + str(len(val))
-                else:
-                    funny_letter = cls.__rho
-
-                    for letter, v in grammar_dict.get('region2_3', dict()).items():
-                        if val in v:
-                            funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
-                            break
-
-                word_dict[k]['r2_funny_letters'].append(funny_letter)
-
-            last_val = None
-            for val in res[k]['r3_rev']:
-                last_val = val
-
-                if len(val) != window_length:
-                    funny_letter = cls.__alpha + str(len(val))
-                else:
-                    funny_letter = cls.__gamma
-
-                    for letter, v in grammar_dict.get('region4', dict()).items():
-                        if val in v:
-                            funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
-                            break
-
-                word_dict[k]['r3_funny_letters'].append(funny_letter)
-
-            if last_val and len(last_val) == window_length:
-                word_dict[k]['r3_funny_letters'][-1] = cls.__alpha + '0' + word_dict[k]['r3_funny_letters'][-1]
-
         with open(out_file, 'w', encoding='utf-8') as fout:
-            for k, v in word_dict.items():
-                line = k + ': ' + ''.join(v['r1_funny_letters']) + ''.join(reversed(v['r2_funny_letters'])) + \
+            with open(bed_in, 'r') as fin:
+                line = fin.readline()
+
+                i = 1  # We keep track of the row we are reading in the BED file
+                while line:
+                    parts = line.strip().split('\t')
+                    idx_1 = int(parts[1])
+                    idx_2 = int(parts[2])
+
+                    r1, r2, r3 = cls.__get_regions(gene_seq, idx_1 - start_idx, idx_2 - start_idx)
+                    r1_rev = r1[::-1]
+                    r2_rev = r2[::-1]
+                    r3_rev = r3[::-1]
+
+                    res_r1 = [r1[i:i + window_length] for i in range(0, len(r1), window_length)]
+                    res_r1_rev = [r1_rev[i:i + window_length][::-1] for i in range(0, len(r1), window_length)]
+                    res_r2 = [r2[i:i + window_length] for i in range(0, len(r2), window_length)]
+                    res_r2_rev = [r2_rev[i:i + window_length][::-1] for i in range(0, len(r2), window_length)]
+                    res_r3 = [r3[i:i + window_length] for i in range(0, len(r3), window_length)]
+                    res_r3_rev = [r3_rev[i:i + window_length][::-1] for i in range(0, len(r3), window_length)]
+
+                    k = str(idx_1) + '_' + str(idx_2) + '_' + str(i)
+
+                    if not word_dict.get(k, None):
+                        word_dict[k] = {'r1_funny_letters': list(), 'r2_funny_letters': list(), 'r3_funny_letters': list()}
+
+                    last_val = None
+                    for val in res_r1:
+                        last_val = val
+
+                        if len(val) != window_length:
+                            funny_letter = cls.__omega + str(len(val))
+                        else:
+                            funny_letter = cls.__gamma
+
+                            for letter, v in grammar_dict.get('region1', dict()).items():
+                                if val in v:
+                                    funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
+                                    break
+
+                        word_dict[k]['r1_funny_letters'].append(funny_letter)
+
+                    if last_val and len(last_val) == window_length:
+                        word_dict[k]['r1_funny_letters'][-1] = word_dict[k]['r1_funny_letters'][-1] + cls.__omega + '0'
+
+                    for val in res_r2_rev:
+                        if len(val) != window_length:
+                            funny_letter = '?' + str(len(val))
+                        else:
+                            funny_letter = cls.__rho
+
+                            for letter, v in grammar_dict.get('region2_3', dict()).items():
+                                if val in v:
+                                    funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
+                                    break
+
+                        word_dict[k]['r2_funny_letters'].append(funny_letter)
+
+                    last_val = None
+                    for val in res_r3_rev:
+                        last_val = val
+
+                        if len(val) != window_length:
+                            funny_letter = cls.__alpha + str(len(val))
+                        else:
+                            funny_letter = cls.__gamma
+
+                            for letter, v in grammar_dict.get('region4', dict()).items():
+                                if val in v:
+                                    funny_letter = cls.ASCII_TO_GREEK.get(letter, '?')
+                                    break
+
+                        word_dict[k]['r3_funny_letters'].append(funny_letter)
+
+                    if last_val and len(last_val) == window_length:
+                        word_dict[k]['r3_funny_letters'][-1] = cls.__alpha + '0' + word_dict[k]['r3_funny_letters'][-1]
+
+                    v = word_dict[k]
+                    write_line = k + ': ' + ''.join(v['r1_funny_letters']) + ''.join(reversed(v['r2_funny_letters'])) + \
                        ''.join(reversed(v['r3_funny_letters']))
-                fout.write(line + '\n')
+
+                    fout.write(write_line + '\n')
+                    del word_dict[k]
+
+                    line = fin.readline()
+                    i += 1
 
 
 if __name__ == '__main__':

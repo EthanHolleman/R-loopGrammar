@@ -74,36 +74,11 @@ def rho_count(word):
 def beta_count(word):
     return word.count('B')
     
-def omega_0_count(word):
+def omega_count(word):
     return word.count('o')
     
-def omega_1_count(word):
-    return word.count('p')
-    
-def omega_2_count(word):
-    return word.count('q')
-    
-def omega_3_count(word):
-    return word.count('u')
-    
-def omega_4_count(word):
-    return word.count('v')
-    
-def alpha_0_count(word):
+def alpha_count(word):
     return word.count('O')
-    
-def alpha_1_count(word):
-    return word.count('P')
-    
-def alpha_2_count(word):
-    return word.count('Q')
-    
-def alpha_3_count(word):
-    return word.count('U')
-    
-def alpha_4_count(word):
-    return word.count('V')
-            
     
     
 
@@ -113,14 +88,15 @@ class GrammarTraining:
     @classmethod
     def get_args(cls):
         parser = argparse.ArgumentParser(description='Find probabilities')
-        parser.add_argument('-w', '--input_words', metavar='WORDS_IN_FILE', type=str, required=True,
+        parser.add_argument('-i', '--input_words', metavar='WORDS_IN_FILE', type=str, required=True,
                             help='WORDS input file', default=None)
         parser.add_argument('-o', '--output_file', metavar='OUTPUT_FILE', type=str, required=False,
                             help='Output TXT file', default='output')
+        parser.add_argument('-w', '--width', metavar='WIDTH', type=int, required=True, help='N-Tuple size')
         return parser.parse_args()
 
     @classmethod
-    def find_probabilities(cls, words_in, out_file='output'):
+    def find_probabilities(cls, words_in, width, out_file='output'):
         with open(words_in, 'r', encoding='utf-8') as fin:
             lines = fin.readlines()
             
@@ -140,16 +116,13 @@ class GrammarTraining:
             word = word.replace('τ', 'T')
             word = word.replace('ρ', 'R')
             word = word.replace('β', 'B')
-            word = word.replace('ω0', 'o')
-            word = word.replace('ω1', 'p')
-            word = word.replace('ω2', 'q')
-            word = word.replace('ω3', 'u')
-            word = word.replace('ω4', 'v')
-            word = word.replace('α0', 'O')
-            word = word.replace('α1', 'P')
-            word = word.replace('α2', 'Q')
-            word = word.replace('α3', 'U')
-            word = word.replace('α4', 'V')
+
+            for i in range(width):
+                word = word.replace(f'ω{i}', 'o')
+                word = word.replace(f'\xcf\x89{i}', 'o')
+                word = word.replace(f'α{i}', 'O')
+                word = word.replace(f'\xce\xb1{i}', 'O')
+
             word = word.replace('\xcf\x83^', 'h')
             word = word.replace('\xcf\x83', 's')
             word = word.replace('\xce\xb4', 'd')
@@ -180,32 +153,24 @@ class GrammarTraining:
         sigma_hat_ct = 0 
         gamma_ct = 0
         delta_ct =0
-        a0_ct = 0
-        a1_ct = 0
-        a2_ct = 0
-        a3_ct = 0
-        a4_ct = 0
+        alpha_ct = 0
+
         for word in training_words:
             sigma_ct += sigma_count(initial_part(word))
             sigma_hat_ct += sigma_hat_count(initial_part(word))
             gamma_ct += gamma_count(initial_part(word))
             delta_ct += delta_count(initial_part(word))
-            a0_ct += alpha_0_count(word)
-            a1_ct += alpha_1_count(word)
-            a2_ct += alpha_2_count(word)
-            a3_ct += alpha_3_count(word)
-            a4_ct += alpha_4_count(word)
-        total_len = sigma_ct + sigma_hat_ct + gamma_ct + delta_ct + a0_ct + a1_ct + a2_ct + a3_ct + a4_ct
+            alpha_ct += alpha_count(word)
+
+        total_len = sigma_ct + sigma_hat_ct + gamma_ct + delta_ct + alpha_ct
         
         p05 = sigma_ct/float(total_len)
         p06 = sigma_hat_ct/float(total_len)
         p07 = gamma_ct/float(total_len)
         p08 = delta_ct/float(total_len)
-        p09 = a0_ct/float(total_len)
-        p10 = a1_ct/float(total_len)
-        p11 = a2_ct/float(total_len)
-        p12 = a3_ct/float(total_len)
-        p13 = a4_ct/float(total_len)
+
+        alpha_probability = 1 - ((alpha_ct / total_len) / width)
+
         
         tau_ct = 0
         tau_hat_ct = 0
@@ -226,32 +191,23 @@ class GrammarTraining:
         tau_hat_ct = 0 
         rho_ct = 0
         beta_ct =0
-        w0_ct = 0
-        w1_ct = 0
-        w2_ct = 0
-        w3_ct = 0
-        w4_ct = 0
+        omega_ct = 0
+
         for word in training_words:
             tau_ct += tau_count(inside_rloop(word))
             tau_hat_ct += tau_hat_count(inside_rloop(word))
             rho_ct += rho_count(inside_rloop(word))
             beta_ct += beta_count(inside_rloop(word))
-            w0_ct += omega_0_count(word)
-            w1_ct += omega_1_count(word)
-            w2_ct += omega_2_count(word)
-            w3_ct += omega_3_count(word)
-            w4_ct += omega_4_count(word)
-        total_len = tau_ct + tau_hat_ct + rho_ct + beta_ct + w0_ct + w1_ct + w2_ct + w3_ct + w4_ct
+            omega_ct += omega_count(word)
+
+        total_len = tau_ct + tau_hat_ct + rho_ct + beta_ct + omega_ct
         
         p18 = tau_ct/float(total_len)
         p19 = tau_hat_ct/float(total_len)
         p20 = rho_ct/float(total_len)
         p21 = beta_ct/float(total_len)
-        p22 = w0_ct/float(total_len)
-        p23 = w1_ct/float(total_len)
-        p24 = w2_ct/float(total_len)
-        p25 = w3_ct/float(total_len)
-        p26 = w4_ct/float(total_len)
+
+        omega_probability = 1 - ((omega_ct / total_len) / width)
         
         sigma_ct = 0   
         sigma_hat_ct = 0 
@@ -301,11 +257,9 @@ class GrammarTraining:
             fout.write('p06 = ' +  str(p06) +'\n')
             fout.write('p07 = ' +  str(p07) +'\n')
             fout.write('p08 = ' +  str(p08) +'\n')
-            fout.write('p09 = ' +  str(p09) +'\n')
-            fout.write('p10 = ' +  str(p10) +'\n')
-            fout.write('p11 = ' +  str(p11) +'\n')
-            fout.write('p12 = ' +  str(p12) +'\n')
-            fout.write('p13 = ' +  str(p13) +'\n')
+
+            fout.write('alpha_probability = ' +  str(alpha_probability) +'\n')
+           
             fout.write('p14 = ' +  str(p14) +'\n')
             fout.write('p15 = ' +  str(p15) +'\n')
             fout.write('p16 = ' +  str(p16) +'\n')
@@ -314,11 +268,9 @@ class GrammarTraining:
             fout.write('p19 = ' +  str(p19) +'\n')
             fout.write('p20 = ' +  str(p20) +'\n')
             fout.write('p21 = ' +  str(p21) +'\n')
-            fout.write('p22 = ' +  str(p22) +'\n')
-            fout.write('p23 = ' +  str(p23) +'\n')
-            fout.write('p24 = ' +  str(p24) +'\n')
-            fout.write('p25 = ' +  str(p25) +'\n')
-            fout.write('p26 = ' +  str(p26) +'\n')
+            
+            fout.write('omega_probability = ' +  str(omega_probability) +'\n')
+
             fout.write('p27 = ' +  str(p27) +'\n')
             fout.write('p28 = ' +  str(p28) +'\n')
             fout.write('p29 = ' +  str(p29) +'\n')
@@ -336,7 +288,7 @@ class GrammarTraining:
 
 if __name__ == '__main__':
     args = vars(GrammarTraining.get_args())
-    GrammarTraining.find_probabilities(args.get('input_words', None), args.get('output_file', 'output'))
+    GrammarTraining.find_probabilities(args.get('input_words', None), args['width'], args.get('output_file', 'output'))
 
 
 

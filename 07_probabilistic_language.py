@@ -19,16 +19,17 @@ class Probabilistic_Language:
     @classmethod
     def get_args(cls):
         parser = argparse.ArgumentParser(description='Find probabilities')
-        parser.add_argument('-w', '--input_words', metavar='WORDS_IN_FILE', type=str, required=True,
+        parser.add_argument('-i', '--input_words', metavar='WORDS_IN_FILE', type=str, required=True,
                             help='WORDS input file', default=None)
         parser.add_argument('-p', '--input_probabilities', metavar='PROBABILITIES_IN_FILE', type=str, required=True,
                             help='Probabilities input file', default=None)
         parser.add_argument('-o', '--output_file', metavar='OUTPUT_FILE', type=str, required=False,
                             help='Output TXT file', default='output')
+        parser.add_argument('-w', '--width', metavar='WIDTH', type=int, required=True, help='N-Tuple size')
         return parser.parse_args()
         
     @classmethod
-    def word_probabilities(cls, words_in, probabs_in, out_file='output'):
+    def word_probabilities(cls, words_in, probabs_in, width, out_file='output'):
 
         
         module = importlib.import_module(probabs_in, package=None)
@@ -41,11 +42,9 @@ class Probabilistic_Language:
         p06 = module.p06
         p07 = module.p07
         p08 = module.p08
-        p09 = module.p09
-        p10 = module.p10
-        p11 = module.p11
-        p12 = module.p12
-        p13 = module.p13
+
+        alpha_probability = module.alpha_probability
+
         p14 = module.p14
         p15 = module.p15
         p16 = module.p16
@@ -54,11 +53,9 @@ class Probabilistic_Language:
         p19 = module.p19
         p20 = module.p20
         p21 = module.p21
-        p22 = module.p22
-        p23 = module.p23
-        p24 = module.p24
-        p25 = module.p25
-        p26 = module.p26
+
+        omega_probability = module.omega_probability
+
         p27 = module.p27
         p28 = module.p28
         p29 = module.p29
@@ -90,22 +87,17 @@ class Probabilistic_Language:
             word = word.replace('τ', 'T')
             word = word.replace('ρ', 'R')
             word = word.replace('β', 'B')
-            word = word.replace('ω0', 'o')
-            word = word.replace('ω1', 'p')
-            word = word.replace('ω2', 'q')
-            word = word.replace('ω3', 'u')
-            word = word.replace('ω4', 'v')
-            word = word.replace('α0', 'O')
-            word = word.replace('α1', 'P')
-            word = word.replace('α2', 'Q')
-            word = word.replace('α3', 'U')
-            word = word.replace('α4', 'V')
+
+            for i in range(width):
+                word = word.replace(f'ω{i}', 'o')
+                word = word.replace(f'α{i}', 'O')
+
             language.append(word[::-1])
         
         def prob(word):
             product = 1
             i=1
-            while word[i] != 'O' and word[i] != 'P' and word[i] != 'Q' and word[i] != 'U' and word[i] != 'V':
+            while word[i] != 'O':
                 if word[i] == 's':
                     product = product *p05
                 elif word[i] == 'h':
@@ -116,15 +108,8 @@ class Probabilistic_Language:
                     product = product *p08
                 i+=1
             if word[i] == 'O':
-                product = product *p09
-            elif word[i] == 'P':
-                product = product *p10
-            elif word[i] == 'Q':
-                product = product *p11
-            elif word[i] == 'U':
-                product = product *p12
-            elif word[i] == 'V':
-                product = product *p13
+                product = product * alpha_probability
+            
             i+=1
             if word[i] == 'T':
                 product = product *p14
@@ -135,7 +120,7 @@ class Probabilistic_Language:
             elif word[i] == 'B':
                 product = product *p17
             i+=1
-            while word[i] != 'o' and word[i] != 'p' and word[i] != 'q' and word[i] != 'u' and word[i] != 'v':
+            while word[i] != 'o':
                 if word[i] == 'T':
                     product = product *p18
                 elif word[i] == 'H':
@@ -146,15 +131,7 @@ class Probabilistic_Language:
                     product = product *p21
                 i+=1
             if word[i] == 'o':
-                product = product *p22
-            elif word[i] == 'p':
-                product = product *p23
-            elif word[i] == 'q':
-                product = product *p24
-            elif word[i] == 'u':
-                product = product *p25
-            elif word[i] == 'v':
-                product = product *p26
+                product = product *omega_probability
             i+=1
             if word[i] == 's':
                 product = product *p27
@@ -206,5 +183,5 @@ class Probabilistic_Language:
 
 if __name__ == '__main__':
     args = vars(Probabilistic_Language.get_args())
-    Probabilistic_Language.word_probabilities(args.get('input_words', None), args.get('input_probabilities', None), args.get('output_file', 'output'))
+    Probabilistic_Language.word_probabilities(args.get('input_words', None), args.get('input_probabilities', None), args['width'], args.get('output_file', 'output'))
 
