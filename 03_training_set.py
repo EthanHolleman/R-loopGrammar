@@ -25,6 +25,8 @@ You should have received a copy of the GNU General Public License
 along with TrainingSet.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# FIX SEED
+random.seed(0)
 
 class TrainingSet:
     @classmethod

@@ -5,12 +5,15 @@ import os
 import glob
 import pathlib
 import dataclasses
-
-#15, and 21, complete 10 runs.
-#consult with Gina reguarding outliers.
-#run p18, w3 on pfc8, also increase training set size
+import configparser
+import shutil
 
 from typing import *
+
+NUMBER_OF_PROCESSES = 5
+
+RIGHT_PADDING = 100
+LEFT_PADDING = 80
 
 region_extractor = importlib.import_module("01_regions_extractor")
 region_threshold = importlib.import_module("02_regions_threshold")
@@ -20,14 +23,6 @@ grammar_word = importlib.import_module("06_grammar_word")
 grammar_training = importlib.import_module("06_grammar_training")
 probabilistic_language = importlib.import_module("07_probabilistic_language")
 in_loop_probs = importlib.import_module("08_in_loop_probs")
-
-PLASMID = "pFC8"
-WINDOW_LENGTH = 3
-TRAINING_SET_LINES = 63
-START_INDEX = 80
-END_INDEX = 1512
-NUMBER_OF_RUNS = 5
-PADDINGS = [12, 15, 9, 6, 18]
 
 class SupressOutput:
     def __init__(self):
@@ -52,40 +47,71 @@ class WorkflowParameters:
 
 
 def do_workflow(workflow_parameters: WorkflowParameters) -> None:
-    run_number, plasmid, window_length, padding_length, training_set_size, start_index, end_index = \
+    run_number, plasmid, window_length, padding_length, \
+    training_set_size, start_index, end_index = \
         dataclasses.astuple(workflow_parameters)
 
-    #TODO: RUN_NUMBER IN EACH FILENAME
     print("RUNNING", dataclasses.astuple(workflow_parameters))
     print(f"[{padding_length}] Running with padding value: {padding_length}")
     print(f"[{padding_length}] Extracting regions...")
 
-    bed_extra_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}.bed_extra.bed"
-    weight_xlsx_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}_weight.xlsx"
-    weight_shannon_entropy_xlsx_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}_weight_shannon.xlsx"
-    bed_extra_training_set_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}.bed_extra_training-set.bed"
-    dict_shannon_xlsx_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx"
-    dict_shannon_json_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx.json"
+
+    plot_start = start_index
+    plot_end = end_index
+    plot_region = RIGHT_PADDING + end_index
+
+    all_rloops_bed_filename = f"{plasmid}_w{window_length}_all_rloops.bed"
+    bed_extra_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}.bed_extra.bed"
+    weight_xlsx_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}_weight.xlsx"
+    weight_shannon_entropy_xlsx_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}_weight_shannon.xlsx"
+    bed_extra_training_set_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}.bed_extra_training-set.bed"
+    dict_shannon_xlsx_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx"
+    dict_shannon_json_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx.json"
     all_rloops_filename = f"{plasmid}_all_rloops_WORDS_SHANNON_p{padding_length}_w{window_length}_{run_number}.txt"
-    training_set_words_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}_training-set_WORDS_SHANNON.txt"
+    training_set_words_filename = f"{plasmid}_p{padding_length}_w{window_length}_{run_number}_training-set_WORDS_SHANNON.txt"
     probabilities_filename = f"{plasmid}_SHANNON_p{padding_length}_w{window_length}_{run_number}_probabilities.py"
     probabilities_filename_no_py = probabilities_filename[:-3]
     prob_lang_filename = f"{plasmid}_SHANNON_p{padding_length}_w{window_length}_{run_number}_prob_lang.py"
     base_in_loop_no_xlsx = f"{plasmid}_SHANNON_p{padding_length}_w{window_length}_{run_number}_base_in_loop"
 
-    # ADJUST BED FILE, THEN USE TRAINING SET BED FILE INSTEAD OF ENTIRE BED_EXTRA FILE.
+    if not pathlib.Path(all_rloops_bed_filename).is_file():
+        with open(all_rloops_bed_filename, "w") as file_handle:
+            for x in range(80 + window_length, end_index - 2 * window_length):
+                for y in range(x + window_length, end_index - window_length):
+                    if (y - x) % window_length == 0:
+                        file_handle.write(f"{plasmid}\t{x}\t{y}\n")
 
     region_extractor.RegionsExtractor.extract_regions(
         f"{plasmid}.fa",
-        f"{plasmid}_SUPERCOILED.bed",
+        f"{plasmid}.bed",
         start_index,
         end_index,
-        window_length,
-        weight_xlsx_filename,
-        4,
+        window_length=window_length,
+        num_regions=4,
         padding=padding_length,
         bed_extra=True,
-        bed_extra_output=bed_extra_filename
+        bed_extra_output=bed_extra_filename,
+        create_weights=False
+    )
+
+    print(f"[{padding_length}] Creating training set...")
+    training_set.TrainingSet.training_set(
+        bed_extra_filename,
+        training_set_size,
+        bed_extra_training_set_filename
+    )
+
+    region_extractor.RegionsExtractor.extract_regions(
+        f"{plasmid}.fa",
+        bed_extra_training_set_filename,
+        start_index,
+        end_index,
+        window_length=window_length,
+        out_pref=weight_xlsx_filename,
+        num_regions=4,
+        padding=padding_length,
+        bed_extra=False,
+        create_weights=True
     )
 
     print(f"[{padding_length}] Region threshold...")
@@ -94,13 +120,6 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         weight_xlsx_filename,
         weight_shannon_entropy_xlsx_filename,
         True  # Shannon Entropy
-    )
-
-    print(f"[{padding_length}] Creating training set...")
-    training_set.TrainingSet.training_set(
-        bed_extra_filename,
-        training_set_size,
-        bed_extra_training_set_filename
     )
 
     print(f"[{padding_length}] Creating dictionary...")
@@ -161,7 +180,9 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         in_loop_probs.Loop_probabilities.in_loop_probabilities(
             all_rloops_filename,
             f"{plasmid}_w{window_length}_all_rloops.bed",
-            end_index - start_index,
+            plot_region,
+            start_index,
+            end_index,
             prob_lang_filename,
             window_length,
             base_in_loop_no_xlsx
@@ -176,46 +197,59 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     except FileExistsError:
         pass
 
-    for file in files:
-        if file.is_file():
-            os.rename(file, local_dir / folder_name / file)
+    try:
+        for file in files:
+            if file.is_file():
+                os.rename(file, local_dir / folder_name / file)
+    except Exception as e:
+        print(e)
 
 
 def main() -> None:
-    with open(f"{PLASMID}_w{WINDOW_LENGTH}_all_rloops.bed", "w") as file_handle:
-        for x in range(80 + WINDOW_LENGTH, 1829 - 2 * WINDOW_LENGTH):
-            for y in range(x + WINDOW_LENGTH, 1829 - WINDOW_LENGTH):
-                if (y - x) % WINDOW_LENGTH == 0:
-                    file_handle.write(f"{PLASMID}\t{x}\t{y}\n")
+    config = configparser.ConfigParser()
+    config.read('workflow_settings.ini')
+
+    window_length = int(config['Run Parameters']['WindowLength'])
+    number_of_runs = int(config['Run Parameters']['NumberOfRuns'])
+    training_set_size = int(config['Run Parameters']['TrainingSetSize'])
+    paddings = list(map(int, config['Run Parameters']['Paddings'].split()))
+    plasmid = config['Run Parameters']['Plasmid']
+
+    start_index = int(config[plasmid]['StartIndex'])
+    end_index = int(config[plasmid]['EndIndex'])
 
     runs = [
         WorkflowParameters(
             r,
-            PLASMID,
-            WINDOW_LENGTH,
+            plasmid,
+            window_length,
             p,
-            TRAINING_SET_LINES,
-            START_INDEX,
-            END_INDEX
-        ) for r in range(NUMBER_OF_RUNS) for p in PADDINGS
+            training_set_size,
+            start_index,
+            end_index
+        ) for r in range(number_of_runs) for p in paddings
     ]
 
-    with multiprocessing.Pool(5) as pool:
+    print(f"TOTAL #RUNS = {len(runs)}")
+
+    with multiprocessing.Pool(NUMBER_OF_PROCESSES) as pool:
         pool.map(do_workflow, runs)
 
-"""
-    for r in range(NUMBER_OF_RUNS):
-        for p in PADDINGS:
-            do_workflow(WorkflowParameters(
-                r,
-                PLASMID,
-                WINDOW_LENGTH,
-                p,
-                TRAINING_SET_LINES,
-                START_INDEX,
-                END_INDEX
-            ))
-"""
+    #aggregate runs in their own folders
+    for padding in paddings:
+        run_folders = glob.glob(f'{plasmid}_p{padding}_w{window_length}_*')
+        aggregate_folder_name = f'aggregate_{plasmid}_p{padding}_w{window_length}_runs_{len(run_folders)}'
+
+        try:
+            os.mkdir(aggregate_folder_name)
+        except FileExistsError:
+            pass
+
+        for run_folder in run_folders:
+            shutil.copyfile(
+                pathlib.Path(run_folder, f'{plasmid}_SHANNON_p{padding}_w{window_length}_base_in_loop.xlsx'),
+                pathlib.Path(aggregate_folder_name, f'{plasmid}_SHANNON_p{padding}_w{window_length}_base_in_loop_{run_folder[-1]}.xlsx')
+            )
 
 if __name__ == "__main__":
     main()

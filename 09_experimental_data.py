@@ -7,8 +7,8 @@ import xlsxwriter
 def loop(ind_1, ind_2, seq_len):
         
     loop_vec = np.array([0] * seq_len) 
-    initial = seq_len + 2 - ind_2
-    final = seq_len + 2 - ind_1
+    initial = seq_len  - ind_2
+    final = seq_len  - ind_1
             
     for index in range(seq_len): 
         if (index >=initial) and (index < final):
@@ -28,12 +28,16 @@ class BedFileAnalysis:
                             help='BED input file', default=None)
         parser.add_argument('-l', '--seq_length', metavar='NUM_BASES', type=int, required=True,
                             help='Number of bases', default=None)
+        parser.add_argument('-s', '--plot_start', metavar='PLOT_START', type=int, required=True,
+                            help='First base to be plotted', default=None)
+        parser.add_argument('-e', '--plot_end', metavar='PLOT_END', type=int, required=True,
+                            help='End of plot', default=None)
         parser.add_argument('-o', '--output_file', metavar='OUTPUT_FILE', type=str, required=False,
                             help='Output XLSX file', default='output')
         return parser.parse_args()
 
     @classmethod
-    def find_exp_prob(cls, bed_in, seq_len, out_file):
+    def find_exp_prob(cls, bed_in, seq_len, plot_start, plot_end, out_file):
     
         with open(bed_in, 'r') as fin:
             lines = fin.readlines()
@@ -53,9 +57,9 @@ class BedFileAnalysis:
             summary += loop(ind_1, ind_2, seq_len)*probs
             
                 
-        
             
-        data = [list(range(1,seq_len +1)), summary.tolist()]
+            
+        data = [list(range(0, plot_end - plot_start)), summary[plot_start: plot_end].tolist()]
         headings = ['Base position', 'Probability'] 
         workbook = xlsxwriter.Workbook(out_file + '.XLSX')
         worksheet = workbook.add_worksheet()
@@ -66,8 +70,8 @@ class BedFileAnalysis:
         chart1 = workbook.add_chart({'type': 'line'}) 
         chart1.add_series({ 
             'name':       '=Sheet1!$B$1', 
-            'categories': '=Sheet1!$A$2:$A$%d' % seq_len, 
-            'values':     '=Sheet1!$B$2:$B$%d' % seq_len, 
+            'categories': '=Sheet1!$A$2:$A$%d' % (plot_end - plot_start+1), 
+            'values':     '=Sheet1!$B$2:$B$%d' % (plot_end - plot_start +1) , 
         }) 
           
         chart1.set_title ({'name': 'Probabilities in R-loop'}) 
@@ -83,4 +87,4 @@ class BedFileAnalysis:
         
 if __name__ == '__main__':
     args = vars(BedFileAnalysis.get_args())
-    BedFileAnalysis.find_exp_prob(args.get('input_bed', None), args.get('seq_length', None), args.get('output_file', 'output'))
+    BedFileAnalysis.find_exp_prob(args.get('input_bed', None), args.get('seq_length', None), args.get('plot_start', None), args.get('plot_end', None), args.get('output_file', 'output'))

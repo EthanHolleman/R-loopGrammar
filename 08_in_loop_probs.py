@@ -25,6 +25,10 @@ class Loop_probabilities:
                             help='BED file which input file is based on', default=None)
         parser.add_argument('-l', '--seq_length', metavar='NUM_BASES', type=int, required=True,
                             help='Number of bases', default=None)
+        parser.add_argument('-s', '--plot_start', metavar='PLOT_START', type=int, required=True,
+                            help='First base to be plotted', default=None)
+        parser.add_argument('-e', '--plot_end', metavar='PLOT_END', type=int, required=True,
+                            help='End of plot', default=None)
         parser.add_argument('-p', '--input_probabilities', metavar='PROBABILITIES_IN_FILE', type=str, required=True,
                             help='Word probabilities input file', default=None)
         parser.add_argument('-o', '--output_file', metavar='OUTPUT_FILE', type=str, required=False,
@@ -33,37 +37,39 @@ class Loop_probabilities:
         return parser.parse_args()
         
     @classmethod
-    def in_loop_probabilities(cls, words_in, bed_in, seq_len, probabs_in, width, output_file='output'):
+    def in_loop_probabilities(cls, words_in, bed_in, seq_len, plot_start, plot_end, probabs_in, width, output_file='output'):
     
         with open(bed_in, "r", encoding='utf-8') as file:
             bed_all_rloops = [list(map(int, line.split('\t')[1:3])) for line in file.readlines()]
+            
+    
 
-        with open(words_in, "r", encoding='utf-8') as file:
-            lines = file.readlines()
+        #with open(words_in, "r", encoding='utf-8') as file:
+        #    lines = file.readlines()
 
-        language_greek = []
+        #language_greek = []
     
-        for line in lines:
-            parsing = line.split(":")[1].strip()
-            language_greek.append(parsing)
+        #for line in lines:
+        #    parsing = line.split(":")[1].strip()
+        #    language_greek.append(parsing)
     
-        language = []
+        #language = []
     
-        for word in language_greek:
-            word = word.replace('σ^', 'h')
-            word = word.replace('σ', 's')
-            word = word.replace('δ', 'd')
-            word = word.replace('γ', 'g')
-            word = word.replace('τ^', 'H')
-            word = word.replace('τ', 'T')
-            word = word.replace('ρ', 'R')
-            word = word.replace('β', 'B')
-            for i in range(width):
-                word = word.replace(f'ω{i}', 'o')
-                word = word.replace(f'α{i}', 'O')
-            language.append(word[::-1])
+        #for word in language_greek:
+        #    word = word.replace('σ^', 'h')
+        #    word = word.replace('σ', 's')
+        #    word = word.replace('δ', 'd')
+        #    word = word.replace('γ', 'g')
+        #    word = word.replace('τ^', 'H')
+        #    word = word.replace('τ', 'T')
+        #    word = word.replace('ρ', 'R')
+        #    word = word.replace('β', 'B')
+        #    for i in range(width):
+        #        word = word.replace(f'ω{i}', 'o')
+        #        word = word.replace(f'α{i}', 'O')
+        #    language.append(word[::-1])
     
-        zipped = list(zip(language, bed_all_rloops))
+        #zipped = list(zip(language, bed_all_rloops))
 
         with open(probabs_in, "r") as file:
             lines = file.readlines()
@@ -75,14 +81,12 @@ class Loop_probabilities:
             probs.append(float(prb))
             
         
-        def loop_location(word, rloop_location):
-            initial = rloop_location[0]
-            final = rloop_location[1]
-            
+        def loop_location(rloop_location):
+           
             loop_vec = np.array([0] * seq_len) 
             
-            initial = seq_len + 2 - rloop_location[1]
-            final = seq_len + 2 - rloop_location[0]
+            initial = seq_len - rloop_location[1]
+            final = seq_len - rloop_location[0]
             
             for index in range(seq_len): 
                 if (index >=initial) and (index < final):
@@ -97,12 +101,12 @@ class Loop_probabilities:
         #print('Type of loop_location:', type(loop_location(language[0])))
         #print('Type of scaled:', type(loop_location(language[j])*probs[j]))
         
-        for j in range(len(zipped)):
+        for j in range(len(bed_all_rloops)):
             print(j)
             #print(type(loop_location(language[j])))
-            summary += loop_location(zipped[j][0], zipped[j][1])*probs[j]
+            summary += loop_location([bed_all_rloops[j][0], bed_all_rloops[j][1]])*probs[j]
             
-        data = [list(range(1,seq_len +1)), summary.tolist()]
+        data = [list(range(0, plot_end - plot_start)), summary[plot_start: plot_end].tolist()]
         headings = ['Base position', 'Probability'] 
         workbook = xlsxwriter.Workbook(output_file + '.XLSX')
         worksheet = workbook.add_worksheet()
@@ -113,8 +117,8 @@ class Loop_probabilities:
         chart1 = workbook.add_chart({'type': 'line'}) 
         chart1.add_series({ 
             'name':       '=Sheet1!$B$1', 
-            'categories': '=Sheet1!$A$2:$A$%d' % seq_len, 
-            'values':     '=Sheet1!$B$2:$B$%d' % seq_len, 
+            'categories': '=Sheet1!$A$2:$A$%d' % (plot_end-plot_start+1), 
+            'values':     '=Sheet1!$B$2:$B$%d' % (plot_end - plot_start+1), 
         }) 
           
         chart1.set_title ({'name': 'Probabilities in R-loop'}) 
@@ -138,5 +142,5 @@ class Loop_probabilities:
 if __name__ == '__main__':
     args = vars(Loop_probabilities.get_args())
     print(args)
-    Loop_probabilities.in_loop_probabilities(args.get('input_words', None), args['input_bed'], args.get('seq_length', None), args.get('input_probabilities', None), args['width'], args.get('output_file', 'output'))
+    Loop_probabilities.in_loop_probabilities(args.get('input_words', None), args['input_bed'], args.get('seq_length', None), args.get('plot_start', None), args.get('plot_end', None), args.get('input_probabilities', None), args['width'], args.get('output_file', 'output'))
     

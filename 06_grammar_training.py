@@ -169,7 +169,7 @@ class GrammarTraining:
         p07 = gamma_ct/float(total_len)
         p08 = delta_ct/float(total_len)
 
-        alpha_probability = 1 - ((alpha_ct / total_len) / width)
+        alpha_probability = ((alpha_ct / total_len) / width)
 
         
         tau_ct = 0
@@ -207,7 +207,7 @@ class GrammarTraining:
         p20 = rho_ct/float(total_len)
         p21 = beta_ct/float(total_len)
 
-        omega_probability = 1 - ((omega_ct / total_len) / width)
+        omega_probability = ((omega_ct / total_len) / width)
         
         sigma_ct = 0   
         sigma_hat_ct = 0 

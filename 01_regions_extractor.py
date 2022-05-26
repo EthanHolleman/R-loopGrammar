@@ -100,7 +100,7 @@ class RegionsExtractor:
 
     @classmethod
     def extract_regions(cls, fasta_in, bed_in, start_idx, end_idx, window_length=5, out_pref='output',
-                        num_regions=4, padding=0, bed_extra=False, bed_extra_output=None):
+                        num_regions=4, padding=0, bed_extra=False, bed_extra_output=None, create_weights=True):
         regions = {}
         out_file = out_pref
 
@@ -169,6 +169,9 @@ class RegionsExtractor:
 
             if bed_extra:
                 fout.close()
+
+        if not create_weights:
+            return
 
         for r in regions.values():
             for k, v in r.items():
