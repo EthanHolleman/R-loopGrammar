@@ -26,7 +26,7 @@ along with TrainingSet.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # FIX SEED
-random.seed(0)
+#random.seed(0)
 
 class TrainingSet:
     @classmethod
