@@ -174,21 +174,19 @@ class GrammarTraining:
 
         # reverse each so we read from left to right
         for word in map(lambda x: x[::-1], training_words):
-            up_to_alpha_part = up_to_alpha(word)[
-                :-2
-            ]  # remove alpha and the letter before it
-            S_to_S_rules = up_to_alpha_part[:-2]
-            S_to_R_rules = up_to_alpha_part[-2:]
+            up_to_alpha_part = up_to_alpha(word)
+            S_to_S_transitions = up_to_alpha_part[:-2]
+            S_to_R_transitions = up_to_alpha_part[-2:]
 
-            sigma_ct += sigma_count(S_to_S_rules)
-            sigma_hat_ct += sigma_hat_count(S_to_S_rules)
-            gamma_ct += gamma_count(S_to_S_rules)
-            delta_ct += delta_count(S_to_S_rules)
+            sigma_ct += sigma_count(S_to_S_transitions)
+            sigma_hat_ct += sigma_hat_count(S_to_S_transitions)
+            gamma_ct += gamma_count(S_to_S_transitions)
+            delta_ct += delta_count(S_to_S_transitions)
 
-            sigma_alpha_ct += sigma_count(S_to_R_rules)
-            sigma_hat_alpha_ct += sigma_hat_count(S_to_R_rules)
-            gamma_alpha_ct += gamma_count(S_to_R_rules)
-            delta_alpha_ct += delta_count(S_to_R_rules)
+            sigma_alpha_ct += sigma_count(S_to_R_transitions)
+            sigma_hat_alpha_ct += sigma_hat_count(S_to_R_transitions)
+            gamma_alpha_ct += gamma_count(S_to_R_transitions)
+            delta_alpha_ct += delta_count(S_to_R_transitions)
 
         total_len = (
             sigma_ct
@@ -228,18 +226,19 @@ class GrammarTraining:
 
         for word in map(lambda x: x[::-1], training_words):
             after_alpha_to_omega_part = after_alpha_to_omega(word)
-            R_to_R_rules = after_alpha_to_omega_part[:-2]
-            R_to_Q_rules = after_alpha_to_omega_part[-2:]
+            R_to_R_transitions = after_alpha_to_omega_part[:-2]
+            R_to_Q_transitions = after_alpha_to_omega_part[-2:]
+            print(R_to_Q_transitions)
 
-            tau_ct += tau_count(R_to_R_rules)
-            tau_hat_ct += tau_hat_count(R_to_R_rules)
-            rho_ct += rho_count(R_to_R_rules)
-            beta_ct += beta_count(R_to_R_rules)
+            tau_ct += tau_count(R_to_R_transitions)
+            tau_hat_ct += tau_hat_count(R_to_R_transitions)
+            rho_ct += rho_count(R_to_R_transitions)
+            beta_ct += beta_count(R_to_R_transitions)
 
-            tau_omega_ct += tau_count(R_to_R_rules)
-            tau_hat_omega_ct += tau_hat_count(R_to_Q_rules)
-            rho_omega_ct += rho_count(R_to_Q_rules)
-            beta_omega_ct += beta_count(R_to_Q_rules)
+            tau_omega_ct += tau_count(R_to_Q_transitions)
+            tau_hat_omega_ct += tau_hat_count(R_to_Q_transitions)
+            rho_omega_ct += rho_count(R_to_Q_transitions)
+            beta_omega_ct += beta_count(R_to_Q_transitions)
 
         total_len = (
             tau_ct
