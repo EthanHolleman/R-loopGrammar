@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-
+import enum
+import json
 
 """
 Script to train a grammar based on a set of  words for R-loops.
@@ -10,285 +11,329 @@ Copyright 2021 Svetlana Poznanovic
 
 """
 
-def split_word(word):
-    temp = word.replace('o', '-')
-    temp = temp.replace('p', '-')
-    temp = temp.replace('q', '-')
-    temp = temp.replace('u', '-')
-    temp = temp.replace('v', '-')
-    temp = temp.replace('O', '-')
-    temp = temp.replace('P', '-')
-    temp = temp.replace('Q', '-')
-    temp = temp.replace('U', '-')
-    temp = temp.replace('V', '-')
- 
-    
-    return temp.split('-')
-    
-def initial_part(word):
-    begin = split_word(word)[2]
-    return begin[:-1]
-    
-def r_loop_start(word):
-    inside = split_word(word)[1]
-    after_alpha = inside[-1]
-    return after_alpha
-    
-def inside_rloop(word):
-    inside = split_word(word)[1]
-    really_inside = inside[:-1]
-    return really_inside
+
+class GrammarSymbol(str, enum.Enum):
+    SIGMA = "s"
+    SIGMA_HAT = "h"
+    TAU = "t"
+    TAU_HAT = "T"
+    DELTA = "d"
+    BETA = "B"
+    RHO = "R"
+    GAMMA = "g"
+    ALPHA = "O"
+    OMEGA = "o"
+
+
+def up_to_alpha(word):
+    alpha_index = word.index(GrammarSymbol.ALPHA)
+    return word[: alpha_index + 1]
+
+
+def after_alpha_to_omega(word):
+    alpha_index = word.index(GrammarSymbol.ALPHA)
+    omega_index = word.index(GrammarSymbol.OMEGA)
+    assert alpha_index < omega_index
+
+    return word[alpha_index + 1 : omega_index + 1]
+
 
 def after_omega(word):
-    end = split_word(word)[0]
-    after_omega = end[-1]
-    return after_omega
-    
-def end_loop(word):
-    end = split_word(word)[0]
-    end_of_loop = end[:-1]
-    return end_of_loop
+    omega_index = word.index(GrammarSymbol.OMEGA)
+    return word[omega_index + 1 :]
 
-    
+
 def sigma_count(word):
-    return word.count('s')
-    
+    return word.count("s")
+
+
 def sigma_hat_count(word):
-    return word.count('h')
-    
+    return word.count("h")
+
+
 def gamma_count(word):
-    return word.count('g')
-    
+    return word.count("g")
+
+
 def delta_count(word):
-    return word.count('d')
-    
+    return word.count("d")
+
+
 def tau_count(word):
-    return word.count('T')
-    
+    return word.count("T")
+
+
 def tau_hat_count(word):
-    return word.count('H')
-    
+    return word.count("H")
+
+
 def rho_count(word):
-    return word.count('R')
-    
+    return word.count("R")
+
+
 def beta_count(word):
-    return word.count('B')
-    
+    return word.count("B")
+
+
 def omega_count(word):
-    return word.count('o')
-    
+    return word.count("o")
+
+
 def alpha_count(word):
-    return word.count('O')
-    
-    
+    return word.count("O")
+
 
 class GrammarTraining:
-
-
     @classmethod
     def get_args(cls):
-        parser = argparse.ArgumentParser(description='Find probabilities')
-        parser.add_argument('-i', '--input_words', metavar='WORDS_IN_FILE', type=str, required=True,
-                            help='WORDS input file', default=None)
-        parser.add_argument('-o', '--output_file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output TXT file', default='output')
-        parser.add_argument('-w', '--width', metavar='WIDTH', type=int, required=True, help='N-Tuple size')
+        parser = argparse.ArgumentParser(description="Find probabilities")
+        parser.add_argument(
+            "-i",
+            "--input_words",
+            metavar="WORDS_IN_FILE",
+            type=str,
+            required=True,
+            help="WORDS input file",
+            default=None,
+        )
+        parser.add_argument(
+            "-o",
+            "--output_file",
+            metavar="OUTPUT_FILE",
+            type=str,
+            required=False,
+            help="Output TXT file",
+            default="output",
+        )
+        parser.add_argument(
+            "-w",
+            "--width",
+            metavar="WIDTH",
+            type=int,
+            required=True,
+            help="N-Tuple size",
+        )
         return parser.parse_args()
 
     @classmethod
-    def find_probabilities(cls, words_in, width, out_file='output'):
-        with open(words_in, 'r', encoding='utf-8') as fin:
+    def find_probabilities(cls, words_in, width, out_file="output"):
+        with open(words_in, "r", encoding="utf-8") as fin:
             lines = fin.readlines()
-            
-        
-        training_words_greek =[]
-        for line in lines:    
+
+        training_words_greek = []
+        for line in lines:
             parsing = line.split(":")[1].strip()
             training_words_greek.append(parsing)
-            
+
         training_words = []
         for word in training_words_greek:
-            word = word.replace('σ^', 'h')
-            word = word.replace('σ', 's')
-            word = word.replace('δ', 'd')
-            word = word.replace('γ', 'g')
-            word = word.replace('τ^', 'H')
-            word = word.replace('τ', 'T')
-            word = word.replace('ρ', 'R')
-            word = word.replace('β', 'B')
+            word = word.replace("σ^", "h")
+            word = word.replace("σ", "s")
+            word = word.replace("δ", "d")
+            word = word.replace("γ", "g")
+            word = word.replace("τ^", "H")
+            word = word.replace("τ", "T")
+            word = word.replace("ρ", "R")
+            word = word.replace("β", "B")
 
             for i in range(width):
-                word = word.replace(f'ω{i}', 'o')
-                word = word.replace(f'\xcf\x89{i}', 'o')
-                word = word.replace(f'α{i}', 'O')
-                word = word.replace(f'\xce\xb1{i}', 'O')
+                word = word.replace(f"ω{i}", "o")
+                word = word.replace(f"\xcf\x89{i}", "o")
+                word = word.replace(f"α{i}", "O")
+                word = word.replace(f"\xce\xb1{i}", "O")
 
-            word = word.replace('\xcf\x83^', 'h')
-            word = word.replace('\xcf\x83', 's')
-            word = word.replace('\xce\xb4', 'd')
-            word = word.replace('\xce\xb3', 'g')
-            word = word.replace('\xcf\x84^', 'H')
-            word = word.replace('\xcf\x84', 'T')
-            word = word.replace('\xcf\x81', 'R')
-            word = word.replace('\xce\xb2', 'B')
-            word = word.replace('\xcf\x890', 'o')
-            word = word.replace('\xcf\x891', 'p')
-            word = word.replace('\xcf\x892', 'q')
-            word = word.replace('\xcf\x893', 'u')
-            word = word.replace('\xcf\x894', 'v')
-            word = word.replace('\xce\xb10', 'O')
-            word = word.replace('\xce\xb11', 'P')
-            word = word.replace('\xce\xb12', 'Q')
-            word = word.replace('\xce\xb13', 'U')
-            word = word.replace('\xce\xb14', 'V')
+            word = word.replace("\xcf\x83^", "h")
+            word = word.replace("\xcf\x83", "s")
+            word = word.replace("\xce\xb4", "d")
+            word = word.replace("\xce\xb3", "g")
+            word = word.replace("\xcf\x84^", "H")
+            word = word.replace("\xcf\x84", "T")
+            word = word.replace("\xcf\x81", "R")
+            word = word.replace("\xce\xb2", "B")
+            word = word.replace("\xcf\x890", "o")
+            word = word.replace("\xcf\x891", "p")
+            word = word.replace("\xcf\x892", "q")
+            word = word.replace("\xcf\x893", "u")
+            word = word.replace("\xcf\x894", "v")
+            word = word.replace("\xce\xb10", "O")
+            word = word.replace("\xce\xb11", "P")
+            word = word.replace("\xce\xb12", "Q")
+            word = word.replace("\xce\xb13", "U")
+            word = word.replace("\xce\xb14", "V")
             training_words.append(word)
-            
-        p01 = 0.25
-        p02 = 0.25
-        p03 = 0.25
-        p04 = 0.25    
-            
-            
-        sigma_ct = 0   
-        sigma_hat_ct = 0 
+
+        sigma_ct = 0
+        sigma_hat_ct = 0
         gamma_ct = 0
-        delta_ct =0
-        alpha_ct = 0
+        delta_ct = 0
 
-        for word in training_words:
-            sigma_ct += sigma_count(initial_part(word))
-            sigma_hat_ct += sigma_hat_count(initial_part(word))
-            gamma_ct += gamma_count(initial_part(word))
-            delta_ct += delta_count(initial_part(word))
-            alpha_ct += alpha_count(word)
+        sigma_alpha_ct = 0
+        sigma_hat_alpha_ct = 0
+        gamma_alpha_ct = 0
+        delta_alpha_ct = 0
 
-        total_len = sigma_ct + sigma_hat_ct + gamma_ct + delta_ct + alpha_ct
-        
-        p05 = sigma_ct/float(total_len)
-        p06 = sigma_hat_ct/float(total_len)
-        p07 = gamma_ct/float(total_len)
-        p08 = delta_ct/float(total_len)
+        # reverse each so we read from left to right
+        for word in map(lambda x: x[::-1], training_words):
+            up_to_alpha_part = up_to_alpha(word)[
+                :-2
+            ]  # remove alpha and the letter before it
+            S_to_S_rules = up_to_alpha_part[:-2]
+            S_to_R_rules = up_to_alpha_part[-2:]
 
-        alpha_probability = ((alpha_ct / total_len) / width)
+            sigma_ct += sigma_count(S_to_S_rules)
+            sigma_hat_ct += sigma_hat_count(S_to_S_rules)
+            gamma_ct += gamma_count(S_to_S_rules)
+            delta_ct += delta_count(S_to_S_rules)
 
-        
+            sigma_alpha_ct += sigma_count(S_to_R_rules)
+            sigma_hat_alpha_ct += sigma_hat_count(S_to_R_rules)
+            gamma_alpha_ct += gamma_count(S_to_R_rules)
+            delta_alpha_ct += delta_count(S_to_R_rules)
+
+        total_len = (
+            sigma_ct
+            + sigma_hat_ct
+            + delta_ct
+            + gamma_ct
+            + sigma_alpha_ct
+            + sigma_hat_alpha_ct
+            + gamma_alpha_ct
+            + delta_alpha_ct
+        )
+
+        S_probabilities_counts = {
+            "S_sigma_S": sigma_ct,
+            "S_sigma_hat_S": sigma_hat_ct,
+            "S_gamma_S": gamma_ct,
+            "S_delta_S": delta_ct,
+            "S_sigma_alpha_R": sigma_alpha_ct,
+            "S_sigma_hat_alpha_R": sigma_hat_alpha_ct,
+            "S_gamma_alpha_R": gamma_alpha_ct,
+            "S_delta_alpha_R": delta_alpha_ct,
+        }
+
+        S_probabilities = {
+            k: (v / float(total_len)) for k, v in S_probabilities_counts.items()
+        }
+
         tau_ct = 0
         tau_hat_ct = 0
         rho_ct = 0
-        beta_ct =0
-        for word in training_words:
-            tau_ct += tau_count(r_loop_start(word))
-            tau_hat_ct += tau_hat_count(r_loop_start(word))
-            rho_ct += rho_count(r_loop_start(word))
-            beta_ct += beta_count(r_loop_start(word))
-        total_len = tau_ct + tau_hat_ct + rho_ct + beta_ct
-        p14 = tau_ct/float(total_len)
-        p15 = tau_hat_ct/float(total_len)
-        p16 = rho_ct/float(total_len)
-        p17 = beta_ct/float(total_len)
-        
-        tau_ct = 0   
-        tau_hat_ct = 0 
-        rho_ct = 0
-        beta_ct =0
-        omega_ct = 0
+        beta_ct = 0
 
-        for word in training_words:
-            tau_ct += tau_count(inside_rloop(word))
-            tau_hat_ct += tau_hat_count(inside_rloop(word))
-            rho_ct += rho_count(inside_rloop(word))
-            beta_ct += beta_count(inside_rloop(word))
-            omega_ct += omega_count(word)
+        tau_omega_ct = 0
+        tau_hat_omega_ct = 0
+        rho_omega_ct = 0
+        beta_omega_ct = 0
 
-        total_len = tau_ct + tau_hat_ct + rho_ct + beta_ct + omega_ct
-        
-        p18 = tau_ct/float(total_len)
-        p19 = tau_hat_ct/float(total_len)
-        p20 = rho_ct/float(total_len)
-        p21 = beta_ct/float(total_len)
+        for word in map(lambda x: x[::-1], training_words):
+            after_alpha_to_omega_part = after_alpha_to_omega(word)
+            R_to_R_rules = after_alpha_to_omega_part[:-2]
+            R_to_Q_rules = after_alpha_to_omega_part[-2:]
 
-        omega_probability = ((omega_ct / total_len) / width)
-        
-        sigma_ct = 0   
-        sigma_hat_ct = 0 
+            tau_ct += tau_count(R_to_R_rules)
+            tau_hat_ct += tau_hat_count(R_to_R_rules)
+            rho_ct += rho_count(R_to_R_rules)
+            beta_ct += beta_count(R_to_R_rules)
+
+            tau_omega_ct += tau_count(R_to_R_rules)
+            tau_hat_omega_ct += tau_hat_count(R_to_Q_rules)
+            rho_omega_ct += rho_count(R_to_Q_rules)
+            beta_omega_ct += beta_count(R_to_Q_rules)
+
+        total_len = (
+            tau_ct
+            + tau_hat_ct
+            + rho_ct
+            + beta_ct
+            + tau_omega_ct
+            + tau_hat_omega_ct
+            + rho_omega_ct
+            + beta_omega_ct
+        )
+
+        R_probabilities_counts = {
+            "R_tau_R": tau_ct,
+            "R_tau_hat_R": tau_hat_ct,
+            "R_rho_R": rho_ct,
+            "R_beta_R": beta_ct,
+            "R_tau_omega_Q": tau_omega_ct,
+            "R_tau_hat_omega_Q": tau_hat_omega_ct,
+            "R_rho_omega_Q": rho_omega_ct,
+            "R_beta_omega_Q": beta_omega_ct,
+        }
+
+        R_probabilities = {
+            k: (v / float(total_len)) for k, v in R_probabilities_counts.items()
+        }
+
+        sigma_ct = 0
+        sigma_hat_ct = 0
         gamma_ct = 0
-        delta_ct =0
-        
-        for word in training_words:
-            sigma_ct += sigma_count(after_omega(word))
-            sigma_hat_ct += sigma_hat_count(after_omega(word))
-            gamma_ct += gamma_count(after_omega(word))
-            delta_ct += delta_count(after_omega(word))
-            
-        total_len = sigma_ct + sigma_hat_ct + gamma_ct + delta_ct 
-        
-        p27 = sigma_ct/float(total_len)
-        p28 = sigma_hat_ct/float(total_len)
-        p29 = gamma_ct/float(total_len)
-        p30 = delta_ct/float(total_len)
-        
-        sigma_ct = 0   
-        sigma_hat_ct = 0 
-        gamma_ct = 0
-        delta_ct =0
-        
-        for word in training_words:
-            sigma_ct += sigma_count(end_loop(word))
-            sigma_hat_ct += sigma_hat_count(end_loop(word))
-            gamma_ct += gamma_count(end_loop(word))
-            delta_ct += delta_count(end_loop(word))
-            
-        total_len = sigma_ct + sigma_hat_ct + gamma_ct + delta_ct +len(training_words)
-        
-        p31 = sigma_ct/float(total_len)
-        p32 = sigma_hat_ct/float(total_len)
-        p33 = gamma_ct/float(total_len)
-        p34 = delta_ct/float(total_len)
-        p35 = len(training_words)/float(total_len)
-        
-        
-            
-        with open(out_file, 'a') as fout:
-            fout.write('p01 = ' +  str(p01) +'\n')  
-            fout.write('p02 = ' +  str(p02) +'\n') 
-            fout.write('p03 = ' +  str(p03) +'\n')
-            fout.write('p04 = ' +  str(p04) +'\n')
-            fout.write('p05 = ' +  str(p05) +'\n')
-            fout.write('p06 = ' +  str(p06) +'\n')
-            fout.write('p07 = ' +  str(p07) +'\n')
-            fout.write('p08 = ' +  str(p08) +'\n')
+        delta_ct = 0
 
-            fout.write('alpha_probability = ' +  str(alpha_probability) +'\n')
-           
-            fout.write('p14 = ' +  str(p14) +'\n')
-            fout.write('p15 = ' +  str(p15) +'\n')
-            fout.write('p16 = ' +  str(p16) +'\n')
-            fout.write('p17 = ' +  str(p17) +'\n')
-            fout.write('p18 = ' +  str(p18) +'\n')
-            fout.write('p19 = ' +  str(p19) +'\n')
-            fout.write('p20 = ' +  str(p20) +'\n')
-            fout.write('p21 = ' +  str(p21) +'\n')
-            
-            fout.write('omega_probability = ' +  str(omega_probability) +'\n')
+        sigma_end_ct = 0
+        sigma_hat_end_ct = 0
+        gamma_end_ct = 0
+        delta_end_ct = 0
 
-            fout.write('p27 = ' +  str(p27) +'\n')
-            fout.write('p28 = ' +  str(p28) +'\n')
-            fout.write('p29 = ' +  str(p29) +'\n')
-            fout.write('p30 = ' +  str(p30) +'\n')    
-            fout.write('p31 = ' +  str(p31) +'\n')
-            fout.write('p32 = ' +  str(p32) +'\n')
-            fout.write('p33 = ' +  str(p33) +'\n')
-            fout.write('p34 = ' +  str(p34) +'\n')
-            fout.write('p35 = ' +  str(p35) +'\n')    
-            
-            
-                   
-        
+        # reverse each so we read from left to right
+        for word in map(lambda x: x[::-1], training_words):
+            after_omega_part = after_omega(word)
+            Q_to_Q_rules = after_omega_part[:-1]
+            Q_to_end_rules = after_omega_part[-1:]
+
+            sigma_ct += sigma_count(Q_to_Q_rules)
+            sigma_hat_ct += sigma_hat_count(Q_to_Q_rules)
+            gamma_ct += gamma_count(Q_to_Q_rules)
+            delta_ct += delta_count(Q_to_Q_rules)
+
+            sigma_end_ct += sigma_count(Q_to_end_rules)
+            sigma_hat_end_ct += sigma_hat_count(Q_to_end_rules)
+            gamma_end_ct += gamma_count(Q_to_end_rules)
+            delta_end_ct += delta_count(Q_to_end_rules)
+
+        total_len = (
+            sigma_ct
+            + sigma_hat_ct
+            + delta_ct
+            + gamma_ct
+            + sigma_end_ct
+            + sigma_hat_end_ct
+            + gamma_end_ct
+            + delta_end_ct
+        )
+
+        Q_probabilities_counts = {
+            "Q_sigma_Q": sigma_ct,
+            "Q_sigma_hat_Q": sigma_hat_ct,
+            "Q_gamma_Q": gamma_ct,
+            "Q_delta_Q": delta_ct,
+            "Q_sigma_end": sigma_end_ct,
+            "Q_sigma_hat_end": sigma_hat_end_ct,
+            "Q_gamma_end": gamma_end_ct,
+            "Q_delta_end": delta_end_ct,
+        }
+
+        Q_probabilities = {
+            k: (v / float(total_len)) for k, v in Q_probabilities_counts.items()
+        }
+
+        with open(out_file, "w", encoding="utf-8") as file_handle:
+            data = dict(
+                S_probabilities_counts=S_probabilities_counts,
+                R_probabilities_counts=R_probabilities_counts,
+                Q_probabilities_counts=Q_probabilities_counts,
+                S_probabilities=S_probabilities,
+                R_probabilities=R_probabilities,
+                Q_probabilities=Q_probabilities,
+            )
+
+            json.dump(data, file_handle, ensure_ascii=False, indent=4)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = vars(GrammarTraining.get_args())
-    GrammarTraining.find_probabilities(args.get('input_words', None), args['width'], args.get('output_file', 'output'))
-
-
-
+    GrammarTraining.find_probabilities(
+        args.get("input_words", None), args["width"], args.get("output_file", "output")
+    )
