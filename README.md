@@ -1,337 +1,49 @@
-# 00 Convert Coord
+## Dependencies:
+- [Python3](https://www.python.org/downloads/)
+- [matplotlib](https://pypi.org/project/matplotlib/)
+- [openpyxl](https://pypi.org/project/openpyxl/)
 
-### Usage
+_________________
+
+## Running the pipeline:
+
+To run the pipe line, you will need pFC53.fa and pFC8.fa fasta files.
+
+You will need to modify or create your own `workflow_settings.ini` file, this will contain information about the gene location, and fasta file for each plasmid that the pipeline will run on.
+
+Each `workflow_settings.ini` should contain a section for `Run Parameters`, e.g
 ```text
-usage: 00_convert_coordinates.py [-h] -b BED_IN_FILE -l LENGTH_PLASMID
-                                 [-o OUTPUT_FILE]
-
-Convert coord
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -l LENGTH_PLASMID, --length-plasmid LENGTH_PLASMID
-                        Length of the plasmid
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output BED file
+[Run Parameters]
+WindowLength = 4
+Paddings = 13
+NumberOfRuns = 10
+Plasmid = pFC53_SUPERCOILEDCR
 ```
 
-### Example
-`python3 00_convert_coordinates.py -b pFC53_SUPERCOILED.bed -l 3906 -o new_pFC53_SUPERCOILED.bed`
-
-
-# 01 Regions Extractor
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
+These parameters specify the plasmid, window length, various paddings, and the number of runs the pipeline will do.
+Each plasmid should have it's own section, e.g
 ```text
-usage: 01_regions_extractor.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE
-                               [-ws WINDOW_LENGTH_SMALL]
-                               [-wl WINDOW_LENGTH_LARGE] [-o OUTPUT_FILE] [-m]
-                               -s START_INDEX -e END_INDEX [-t THRESHOLD]
-                               [-p MAX_PADDING] [-l]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -ws WINDOW_LENGTH_SMALL, --window_length_small WINDOW_LENGTH_SMALL
-                        Number of nucleotides in small single region
-  -wl WINDOW_LENGTH_LARGE, --window_length_large WINDOW_LENGTH_LARGE
-                        Number of nucleotides in large single region
-  -o PREFIX_OUTPUT_FILES, --prefix-output-files PREFIX_OUTPUT_FILES
-                        Prefix output files (without extension)
-  -m, --merge-regions   Merge first 1st and 2nd regions (resp. 3rd and 4th)
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -t THRESHOLD, --threshold THRESHOLD
-                        Threshold on word counts
-  -p MAX_PADDING, --max-padding MAX_PADDING
-                        Maximum number of nucleotides to be padded for each
-                        region
-  -l, --compute_large_region
-                        Compute output file for large region
+[pFC53_SUPERCOILED]
+StartIndex = 80
+EndIndex = 1829
+FastaFile = pFC53
 ```
+Each section will contain the plasmid's gene location and the associated fasta file.
 
-### Example
-`python3 01_regions_extractor.py -f pFC53.fa -b pFC53_SUPERCOILED.bed -o pFC53_SUPERCOILED -ws 5 -s 1 -e 1929 -p 5`
-
-
-# 02 Regions Threshold
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
+To run the pipeline execute the following command,
 ```text
-usage: 02_regions_threshold.py [-h] [-i XLSX_IN_FILE] [-s] [-o OUTPUT_FILE]
-
-Regions threshold
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i XLSX_IN_FILE, --input-xlsx XLSX_IN_FILE
-                        XLSX input file
-  -s, --shannon-entropy
-                        Use Shannon entropy
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
+python run_workflow.py
 ```
+This will execute batches of runs in parallel spawning 10 processes for each batch. (This can be adjusted by modifying `NUMBER_OF_PROCESSES` in the `run_workflow.py` script)
 
-### Example
-Thresholding based on weight jump:
-`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -o pFC53_SUPERCOILED_w5_weight_threshold.xlsx`
+After execution, each run will be collected into folders according to run number.
+Repeat above for the other plasmid, by changing the `Plasmid` parameter in the `Run Parameters` section of the `workflow_settings.ini`.
 
-Thresholding based on Shannon entropy:
-`python3 02_regions_threshold.py -i pFC53_SUPERCOILED_w5_weight.xlsx -s -o pFC53_SUPERCOILED_w5_weight_shannon.xlsx`
+_________________
 
+### Running the union pipeline:
 
-# 03 Training Set
-
-### Usage
-```text
-usage: 03_training_set.py [-h] -i BED_IN_FILE [-n NUM_LINES] [-o OUTPUT_FILE]
-
-Training set
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -n NUM_LINES, --num-lines NUM_LINES
-                        Create training set with NUM_LINES lines
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output BED file
-```
-
-### Example
-`python3 03_training_set.py -i pFC53_SUPERCOILED.bed_extra.bed -n 63 -o pFC53_SUPERCOILED.bed_extra_training-set.bed`
+To execute the `union_workflow.py` to union these runs together, we specify which runs we are merging by modifying the parameters in the `union_workflow.py` script.
 
 
-# 04 Grammar Dict
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
 
-### Usage
-```text
-usage: 04_grammar_dict.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE -x XLSX_IN_FILE
-                          [-t XLSX_THRESHOLD_IN_FILE] -s START_INDEX -e
-                          END_INDEX -w WINDOW_LENGTH [-o OUTPUT_FILE]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -x XLSX_IN_FILE, --input-xlsx XLSX_IN_FILE
-                        XLSX input file
-  -t XLSX_THRESHOLD_IN_FILE, --input-xlsx-threshold XLSX_THRESHOLD_IN_FILE
-                        XLSX threshold input file
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Number of nucleotides in single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
-```
-
-### Example
-Without threshold input file:
-`python3 04_grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra_training-set.bed -o pFC53_SUPERCOILED_DICT_FULL.xlsx -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight.xlsx -w 5`
-
-Using threshold input file:
-`python3 04_grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra_training-set.bed -o pFC53_SUPERCOILED_DICT_SHANNON.xlsx -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight.xlsx -w 5 -t pFC53_SUPERCOILED_w5_weight_shannon.xlsx`
-
-
-# 05 Union Dict
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
-```text
-usage: 05_union_dict.py [-h] -i INPUT_FILE_LIST [-o OUTPUT_PREFIX]
-
-Union dict
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUT_FILE_LIST, --input-file-list INPUT_FILE_LIST
-                        Text file containing input files (one per line)
-  -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
-                        Prefix for output JSON file
-```
-
-### Example
-`python3 05_union_dict.py -i dictionary_info.txt -o dictionary`
-
-### Input Format
-The input file must be a text file with the following structure:
-```text
-pFC8_SUPERCOILED_DICT.xlsx.json
-pFC8_SUPERCOILED_w5_weight.xlsx
-pFC53_SUPERCOILED_DICT.xlsx.json
-pFC53_SUPERCOILED_w5_weight.xlsx
-```
-
-# 06 Grammar Word
-
-### Usage
-```text
-usage: 06_grammar_word.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE -j JSON_IN_FILE
-                          -s START_INDEX -e END_INDEX [-w WINDOW_LENGTH]
-                          [-o OUTPUT_FILE]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -j JSON_IN_FILE, --input-json JSON_IN_FILE
-                        JSON input file
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Number of nucleotides in single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output TXT file
-```
-
-### Example
-`python3 06_grammar_word.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_WORDS_SHANNON.txt -s 1 -e 1929 -j pFC53_SUPERCOILED_DICT_SHANNON.xlsx.json -w 5`
-
-
-# Regions Extractor
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
-```text
-usage: regions_extractor.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE
-                            [-ws WINDOW_LENGTH_SMALL]
-                            [-wl WINDOW_LENGTH_LARGE] [-o OUTPUT_FILE] [-m] -s
-                            START_INDEX -e END_INDEX [-t THRESHOLD]
-                            [-p MAX_PADDING] [-l]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -ws WINDOW_LENGTH_SMALL, --window_length_small WINDOW_LENGTH_SMALL
-                        Number of nucleotides in small single region
-  -wl WINDOW_LENGTH_LARGE, --window_length_large WINDOW_LENGTH_LARGE
-                        Number of nucleotides in large single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
-  -m, --merge-regions   Merge first 1st and 2nd regions (resp. 3rd and 4th)
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -t THRESHOLD, --threshold THRESHOLD
-                        Threshold on word counts
-  -p MAX_PADDING, --max-padding MAX_PADDING
-                        Maximum number of nucleotides to be padded for each
-                        region
-  -l, --compute_large_region
-                        Compute output file for large region
-```
-
-### Example
-`python3 regions_extractor.py -f pFC53.fa -b pFC53_SUPERCOILED.bed -o pFC53_SUPERCOILED -ws 5 -s 1 -e 1929 -p 5`
-
-
-# Grammar Symbols
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
-```text
-usage: grammar_symbols.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE
-                          [-x XLSX_IN_FILE] -s START_INDEX -e END_INDEX
-                          [-n NUM_RLOOPS] [-r] [-o OUTPUT_FILE]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -x XLSX_IN_FILE, --input-xlsx XLSX_IN_FILE
-                        XLSX input file
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -n NUM_RLOOPS, --num-rloops NUM_RLOOPS
-                        Consider only NUM_RLOOPS rloops inside the BED file
-  -r, --random-rloops   Consider only NUM_RLOOPS random rloops inside the BED
-                        file
-  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Number of nucleotides in single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
-```
-
-### Example
-`python3 grammar_symbols.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_GRAMMAR.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx -w 5`
-
-
-# Grammar Dict
-### Dependencies
-* [OpenPyXL](https://openpyxl.readthedocs.io/en/stable/) (https://pypi.org/project/openpyxl/)
-
-### Usage
-```text
-usage: grammar_dict.py [-h] -f FASTA_IN_FILE -b BED_IN_FILE [-x XLSX_IN_FILE]
-                       -s START_INDEX -e END_INDEX [-n NUM_RLOOPS] [-r]
-                       [-w WINDOW_LENGTH] [-o OUTPUT_FILE]
-
-Regions extractor
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FASTA_IN_FILE, --input-fasta FASTA_IN_FILE
-                        FASTA input file
-  -b BED_IN_FILE, --input-bed BED_IN_FILE
-                        BED input file
-  -x XLSX_IN_FILE, --input-xlsx XLSX_IN_FILE
-                        XLSX input file
-  -s START_INDEX, --start-index START_INDEX
-                        Start index of gene region
-  -e END_INDEX, --end-index END_INDEX
-                        End index of gene region
-  -n NUM_RLOOPS, --num-rloops NUM_RLOOPS
-                        Consider only NUM_RLOOPS rloops inside the BED file
-  -r, --random-rloops   Consider only NUM_RLOOPS random rloops inside the BED
-                        file
-  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Number of nucleotides in single region
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Output XLSX file
-```
-
-### Example
-`python3 grammar_dict.py -f pFC53.fa -b pFC53_SUPERCOILED.bed_extra.bed -o pFC53_SUPERCOILED_DICT.xlsx -n 63 -r -s 1 -e 1929 -x pFC53_SUPERCOILED_w5_weight_extra.xlsx -w 5`
