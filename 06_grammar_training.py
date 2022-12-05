@@ -2,6 +2,7 @@
 import argparse
 import enum
 import json
+import collections
 
 """
 Script to train a grammar based on a set of  words for R-loops.
@@ -126,6 +127,10 @@ class GrammarTraining:
             training_words_greek.append(parsing)
 
         training_words = []
+
+        omega_counts = collections.defaultdict(int)
+        alpha_counts = collections.defaultdict(int)
+
         for word in training_words_greek:
             word = word.replace("σ^", "h")
             word = word.replace("σ", "s")
@@ -137,6 +142,9 @@ class GrammarTraining:
             word = word.replace("β", "B")
 
             for i in range(width):
+                omega_counts[i] += word.count(f"ω{i}")
+                alpha_counts[i] += word.count(f"α{i}")
+
                 word = word.replace(f"ω{i}", "o")
                 word = word.replace(f"\xcf\x89{i}", "o")
                 word = word.replace(f"α{i}", "O")
@@ -162,6 +170,7 @@ class GrammarTraining:
             word = word.replace("\xce\xb14", "V")
             training_words.append(word)
 
+        print(alpha_counts, omega_counts)
         sigma_ct = 0
         sigma_hat_ct = 0
         gamma_ct = 0
@@ -210,8 +219,18 @@ class GrammarTraining:
             "S_delta_alpha_R": delta_alpha_ct,
         }
 
+        def alter_key_name(key):
+            segments = key.split("_")
+            new_segments = segments[:3] + ["i"] + segments[3:]
+            return "_".join(new_segments)
+
         S_probabilities = {
-            k: (v / float(total_len)) for k, v in S_probabilities_counts.items()
+            k
+            if "alpha" not in k
+            else alter_key_name(k): (v / float(total_len))
+            if "alpha" not in k
+            else (v / float(total_len) / width)
+            for k, v in S_probabilities_counts.items()
         }
 
         tau_ct = 0
@@ -228,7 +247,6 @@ class GrammarTraining:
             after_alpha_to_omega_part = after_alpha_to_omega(word)
             R_to_R_transitions = after_alpha_to_omega_part[:-2]
             R_to_Q_transitions = after_alpha_to_omega_part[-2:]
-            print(R_to_Q_transitions)
 
             tau_ct += tau_count(R_to_R_transitions)
             tau_hat_ct += tau_hat_count(R_to_R_transitions)
@@ -263,7 +281,12 @@ class GrammarTraining:
         }
 
         R_probabilities = {
-            k: (v / float(total_len)) for k, v in R_probabilities_counts.items()
+            k
+            if "omega" not in k
+            else alter_key_name(k): (v / float(total_len))
+            if "omega" not in k
+            else (v / float(total_len) / width)
+            for k, v in R_probabilities_counts.items()
         }
 
         sigma_ct = 0
@@ -279,18 +302,18 @@ class GrammarTraining:
         # reverse each so we read from left to right
         for word in map(lambda x: x[::-1], training_words):
             after_omega_part = after_omega(word)
-            Q_to_Q_rules = after_omega_part[:-1]
-            Q_to_end_rules = after_omega_part[-1:]
+            Q_to_Q_transitions = after_omega_part[:-1]
+            Q_to_end_transitions = after_omega_part[-1:]
 
-            sigma_ct += sigma_count(Q_to_Q_rules)
-            sigma_hat_ct += sigma_hat_count(Q_to_Q_rules)
-            gamma_ct += gamma_count(Q_to_Q_rules)
-            delta_ct += delta_count(Q_to_Q_rules)
+            sigma_ct += sigma_count(Q_to_Q_transitions)
+            sigma_hat_ct += sigma_hat_count(Q_to_Q_transitions)
+            gamma_ct += gamma_count(Q_to_Q_transitions)
+            delta_ct += delta_count(Q_to_Q_transitions)
 
-            sigma_end_ct += sigma_count(Q_to_end_rules)
-            sigma_hat_end_ct += sigma_hat_count(Q_to_end_rules)
-            gamma_end_ct += gamma_count(Q_to_end_rules)
-            delta_end_ct += delta_count(Q_to_end_rules)
+            sigma_end_ct += sigma_count(Q_to_end_transitions)
+            sigma_hat_end_ct += sigma_hat_count(Q_to_end_transitions)
+            gamma_end_ct += gamma_count(Q_to_end_transitions)
+            delta_end_ct += delta_count(Q_to_end_transitions)
 
         total_len = (
             sigma_ct
