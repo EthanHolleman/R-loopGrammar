@@ -75,7 +75,7 @@ def do_workflow(wp: WorkflowParameters) -> None:
     dict_shannon_json_filename = f"{wp.plasmid}_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_DICT_SHANNON.xlsx.json"
     all_rloops_filename = f"{wp.plasmid}_all_rloops_WORDS_SHANNON_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}.txt"
     training_set_words_filename = f"{wp.plasmid}_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_training-set_WORDS_SHANNON.txt"
-    probabilities_filename = f"{wp.plasmid}_SHANNON_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_probabilities.py"
+    probabilities_filename = f"{wp.plasmid}_SHANNON_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_probabilities.json"
     probabilities_filename_no_py = probabilities_filename[:-3]
     prob_lang_filename = f"{wp.plasmid}_SHANNON_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_prob_lang.py"
     base_in_loop_no_xlsx = f"{wp.plasmid}_SHANNON_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_base_in_loop"
@@ -200,7 +200,7 @@ def do_workflow(wp: WorkflowParameters) -> None:
     with SupressOutput():
         probabilistic_language.Probabilistic_Language.word_probabilities(
             all_rloops_filename,
-            probabilities_filename_no_py,
+            probabilities_filename,
             wp.window_length,
             prob_lang_filename,
         )
