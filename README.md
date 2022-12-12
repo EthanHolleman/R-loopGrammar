@@ -17,10 +17,11 @@ Each `workflow_settings.ini` should contain a section for `Run Parameters`, e.g
 WindowLength = 4
 Paddings = 13
 NumberOfRuns = 10
-Plasmid = pFC53_SUPERCOILEDCR
+TrainingSetPercent = 10
+Plasmid = pFC53_SUPERCOILEDCR pFC8_SUPERCOILEDCR
 ```
 
-These parameters specify the plasmid, window length, various paddings, and the number of runs the pipeline will do.
+These parameters specify the plasmids, window length, various paddings, training set percentage, and the number of runs the pipeline will do.
 Each plasmid should have it's own section, e.g
 ```text
 [pFC53_SUPERCOILED]
@@ -32,12 +33,11 @@ Each section will contain the plasmid's gene location and the associated fasta f
 
 To run the pipeline execute the following command,
 ```text
-python run_workflow.py
+make run-pipeline
 ```
 This will execute batches of runs in parallel spawning 10 processes for each batch. (This can be adjusted by modifying `NUMBER_OF_PROCESSES` in the `run_workflow.py` script)
 
-After execution, each run will be collected into folders according to run number.
-Repeat above for the other plasmid, by changing the `Plasmid` parameter in the `Run Parameters` section of the `workflow_settings.ini`.
+After execution, each run will be collected into folders according to run number, and then each run collected it's folder with respect to the plasmid, padding and width.
 
 _________________
 
