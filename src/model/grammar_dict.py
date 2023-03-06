@@ -506,6 +506,7 @@ class GrammarDict:
                 )
 
                 r1_val = res[k]["r1"][i] if len(res[k]["r1"]) > i else None
+
                 r1_val_locations = (
                     cls.__find_locations(
                         r1_val,

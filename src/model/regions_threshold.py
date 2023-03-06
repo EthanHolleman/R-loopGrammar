@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import re
+import dataclasses
 import math
 
 import openpyxl
@@ -59,27 +59,53 @@ class RegionsThreshold:
 
         for i, ws_name in enumerate(wb.sheetnames):
             count = 1
-            tmp_sum = 0
+            entropy_sum = 0
             max_weight = 0
             ws_out = wb_out.create_sheet(ws_name)
-            prev_entropy = -math.inf
+            prev_average_entropy = -math.inf
+            group_same_entropies: dict[float, list[str]] = {}
 
             for row in wb.worksheets[i].iter_rows(values_only=True):
                 weight = float(row[len(row) - 1])
-
                 if count == 1 or max_weight == 0:
                     max_weight = weight
 
-                p = weight / max_weight
-                tmp = -p * math.log(p, 10)
-                tmp_sum += tmp
-                entropy = tmp_sum / count
+                rescaled_weight = weight / max_weight
+                entropy = -rescaled_weight * math.log(rescaled_weight, 10)
 
-                if entropy >= prev_entropy:
+                # If we find the weight inside of our dictionary, we've already
+                # accounted for it, so we skip this entry.
+
+                if group_same_entropies.get(weight):
+                    group_same_entropies[weight].append(row[0])
+                    new_row = list(row)
+
+                    entropy_sum += entropy
+                    average_entropy = entropy_sum / count
+
+                    new_row.append(entropy)
+                    new_row.append(average_entropy)
+                    new_row.append(prev_average_entropy)
+
+                    ws_out.append(new_row)
+                    prev_average_entropy = average_entropy
+                    count += 1
+                    continue
+                else:
+                    group_same_entropies[weight] = [row[0]]
+
+                entropy_sum += entropy
+                average_entropy = entropy_sum / count
+
+                if average_entropy >= prev_average_entropy:
                     new_row = list(row)
                     new_row.append(entropy)
+                    new_row.append(average_entropy)
+                    new_row.append(prev_average_entropy)
+                    new_row.append(1)
+
                     ws_out.append(new_row)
-                    prev_entropy = entropy
+                    prev_average_entropy = average_entropy
                 else:
                     ws_out.close()
                     break
@@ -90,24 +116,46 @@ class RegionsThreshold:
 
     @classmethod
     def get_args(cls):
-        parser = argparse.ArgumentParser(description='Regions threshold')
-        parser.add_argument('-i', '--input-xlsx', metavar='XLSX_IN_FILE', type=str, required=False,
-                            help='XLSX input file', default=None)
-        parser.add_argument('-s', '--shannon-entropy', required=False, action='store_true',
-                            help='Use Shannon entropy')
-        parser.add_argument('-o', '--output-file', metavar='OUTPUT_FILE', type=str, required=False,
-                            help='Output XLSX file', default='output.xlsx')
+        parser = argparse.ArgumentParser(description="Regions threshold")
+        parser.add_argument(
+            "-i",
+            "--input-xlsx",
+            metavar="XLSX_IN_FILE",
+            type=str,
+            required=False,
+            help="XLSX input file",
+            default=None,
+        )
+        parser.add_argument(
+            "-s",
+            "--shannon-entropy",
+            required=False,
+            action="store_true",
+            help="Use Shannon entropy",
+        )
+        parser.add_argument(
+            "-o",
+            "--output-file",
+            metavar="OUTPUT_FILE",
+            type=str,
+            required=False,
+            help="Output XLSX file",
+            default="output.xlsx",
+        )
         return parser.parse_args()
 
     @classmethod
-    def extract_regions(cls, xlsx_in, out_file='output.xlsx', shannon_entropy=False):
+    def extract_regions(cls, xlsx_in, out_file="output.xlsx", shannon_entropy=False):
         if shannon_entropy:
             cls.__threshold_shannon(xlsx_in, out_file)
         else:
             cls.__threshold_weight(xlsx_in, out_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = vars(RegionsThreshold.get_args())
-    RegionsThreshold.extract_regions(args.get('input_xlsx', None), args.get('output_file', 'output.xlsx'),
-                                     args.get('shannon_entropy', False))
+    RegionsThreshold.extract_regions(
+        args.get("input_xlsx", None),
+        args.get("output_file", "output.xlsx"),
+        args.get("shannon_entropy", False),
+    )
