@@ -13,20 +13,17 @@ import random
 from typing import *
 
 NUMBER_OF_PROCESSES = 10
-TRAINING_SET_PERCENTAGE = 0.1  # E.G 0.1 is 10%
 RIGHT_PADDING = 100
-# RIGHT_PADDING = 100
 LEFT_PADDING = 80
-# LEFT_PADDING = 80
 
-region_extractor = importlib.import_module("01_regions_extractor")
-region_threshold = importlib.import_module("02_regions_threshold")
-training_set = importlib.import_module("03_training_set")
-grammar_dict = importlib.import_module("04_grammar_dict")
-grammar_word = importlib.import_module("06_grammar_word")
-grammar_training = importlib.import_module("06_grammar_training")
-probabilistic_language = importlib.import_module("07_probabilistic_language")
-in_loop_probs = importlib.import_module("08_in_loop_probs")
+import model.regions_extractor as region_extractor
+import model.regions_threshold as region_threshold
+import model.training_set as training_set
+import model.grammar_dict as grammar_dict
+import model.grammar_word as grammar_word
+import model.grammar_training as grammar_training
+import model.probabilistic_language as probabilistic_language
+import model.in_loop_probs as in_loop_probs
 
 
 class SupressOutput:
@@ -49,22 +46,24 @@ class WorkflowParameters:
     start_index: int
     end_index: int
     fasta_file: str
+    training_set_percent: float
 
 
 def do_workflow(wp: WorkflowParameters) -> None:
     print(dataclasses.asdict(wp))
     print(f"[{wp.padding_length}] Extracting regions...")
 
-    seed = os.urandom(32)
-    random.seed(seed)
+    # seed = os.urandom(32)
+    seed = wp.run_number * 100
+    random.seed(f"{wp.plasmid}{seed}")
 
     plot_start = wp.start_index
     plot_end = wp.end_index
     plot_region = RIGHT_PADDING + wp.end_index
 
     seed_filename = f"{wp.plasmid}_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}_SEED.txt"
-    with open(seed_filename, "wb") as seed_file:
-        seed_file.write(seed)
+    # with open(seed_filename, "wb") as seed_file:
+    #    seed_file.write(seed)
 
     all_rloops_bed_filename = f"{wp.plasmid}_w{wp.window_length}_all_rloops.bed"
     bed_extra_filename = f"{wp.plasmid}_p{wp.padding_length}_w{wp.window_length}_{wp.run_number}.bed_extra.bed"
@@ -83,7 +82,7 @@ def do_workflow(wp: WorkflowParameters) -> None:
     with open(f"{wp.plasmid}.bed", "r") as bed_file_fd:
         bed_file_length = len(bed_file_fd.readlines())
 
-    training_set_size = math.ceil(bed_file_length * TRAINING_SET_PERCENTAGE)
+    training_set_size = math.ceil(bed_file_length * (wp.training_set_percent / 100.0))
     print(
         f"[{wp.run_number}, {wp.padding_length}] Training Set Size: {training_set_size}"
     )
@@ -244,53 +243,54 @@ def do_workflow(wp: WorkflowParameters) -> None:
 
 def main() -> None:
     config = configparser.ConfigParser()
-    config.read("workflow_settings.ini")
+    config.read("run_workflow_settings.ini")
 
     window_length = int(config["Run Parameters"]["WindowLength"])
     number_of_runs = int(config["Run Parameters"]["NumberOfRuns"])
     paddings = list(map(int, config["Run Parameters"]["Paddings"].split()))
-    plasmid = config["Run Parameters"]["Plasmid"]
+    plasmids = config["Run Parameters"]["Plasmids"].split()
+    training_set_percent = float(config["Run Parameters"]["TrainingSetPercent"])
 
-    fasta_file = config[plasmid]["FastaFile"]
-    start_index = int(config[plasmid]["StartIndex"])
-    end_index = int(config[plasmid]["EndIndex"])
+    for plasmid in plasmids:
+        fasta_file = config[plasmid]["FastaFile"]
+        start_index = int(config[plasmid]["StartIndex"])
+        end_index = int(config[plasmid]["EndIndex"])
 
-    runs = [
-        WorkflowParameters(
-            r, plasmid, window_length, p, start_index, end_index, fasta_file
-        )
-        for r in range(number_of_runs)
-        for p in paddings
-    ]
-
-    print(f"TOTAL #RUNS = {len(runs)}")
-
-    with multiprocessing.Pool(NUMBER_OF_PROCESSES) as pool:
-        pool.map(do_workflow, runs)
-
-    # aggregate runs in their own folders
-    for padding in paddings:
-        run_folders = glob.glob(f"{plasmid}_p{padding}_w{window_length}_*")
-        aggregate_folder_name = (
-            f"aggregate_{plasmid}_p{padding}_w{window_length}_runs_{len(run_folders)}"
-        )
-
-        try:
-            os.mkdir(aggregate_folder_name)
-        except FileExistsError:
-            pass
-
-        for run_folder in run_folders:
-            shutil.copyfile(
-                pathlib.Path(
-                    run_folder,
-                    f"{plasmid}_SHANNON_p{padding}_w{window_length}_{run_folder[-1]}_base_in_loop.xlsx",
-                ),
-                pathlib.Path(
-                    aggregate_folder_name,
-                    f"{plasmid}_SHANNON_p{padding}_w{window_length}_{run_folder[-1]}_base_in_loop.xlsx",
-                ),
+        runs = [
+            WorkflowParameters(
+                r,
+                plasmid,
+                window_length,
+                p,
+                start_index,
+                end_index,
+                fasta_file,
+                training_set_percent,
             )
+            for r in range(number_of_runs)
+            for p in paddings
+        ]
+
+        print(f"TOTAL #RUNS = {len(runs)}")
+
+        with multiprocessing.Pool(NUMBER_OF_PROCESSES) as pool:
+            pool.map(do_workflow, runs)
+
+        os.remove(f"{plasmid}_w{window_length}_all_rloops.bed")
+
+        for padding in paddings:
+            run_folders = glob.glob(f"{plasmid}_p{padding}_w{window_length}_*")
+            aggregate_folder_name = pathlib.Path(
+                f"aggregate_{plasmid}_p{padding}_w{window_length}_runs_{len(run_folders)}"
+            )
+
+            try:
+                os.mkdir(aggregate_folder_name)
+            except FileExistsError:
+                pass
+
+            for run_folder in run_folders:
+                shutil.move(run_folder, aggregate_folder_name / run_folder)
 
 
 if __name__ == "__main__":

@@ -67,16 +67,17 @@ if __name__ == "__main__":
     colors = ["orange", "blue", "black"]
 
     folder_names = [
-        "UNION_GYRASECR_p13_w4",
-        "UNION_SUPERCOILEDCR_p13_w4",
-        "UNION_LINEARIZED_p13_w4",
+        "aggregate_pFC53_GYRASECR_pFC8_GYRASECR_p13_w4_runs_10",
+        "aggregate_pFC53_SUPERCOILEDCR_pFC8_SUPERCOILEDCR_p13_w4_runs_10",
+        "aggregate_pFC53_LINEARIZED_pFC8_LINEARIZED_p13_w4_runs_10",
     ]
+
     collected_probabilities = []
 
     for folder in folder_names:
         collected_probabilities.append(collect_probabilities(folder))
 
-    folder_names = list(map(lambda x: x.split("_")[1], folder_names))
+    folder_names = list(map(lambda x: x.split("_")[2], folder_names))
     for i in range(len(folder_names)):
         for k, v in REPLACE.items():
             if k in folder_names[i]:

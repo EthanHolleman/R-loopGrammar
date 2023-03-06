@@ -47,7 +47,9 @@ def calculate_mse(exp: List[float], pred: List[float]):
 
 
 def graph_rlooper_full_seq(plasmid_type, plasmid, expected):
-    filename = RLOOPER_FILE_FULL_SEQ_MAP.get((plasmid, plasmid_type), None)
+    filename = pathlib.Path("rlooper_results") / RLOOPER_FILE_FULL_SEQ_MAP.get(
+        (plasmid, plasmid_type), None
+    )
     if filename:
         with open(filename) as rlooper_probability_file:
             lines = rlooper_probability_file.readlines()
@@ -73,7 +75,9 @@ def graph_rlooper_full_seq(plasmid_type, plasmid, expected):
 
 
 def graph_rlooper_gene(plasmid_type, plasmid, expected):
-    filename = RLOOPER_FILE_GENE_MAP.get((plasmid, plasmid_type), None)
+    filename = pathlib.Path("rlooper_results") / RLOOPER_FILE_GENE_MAP.get(
+        (plasmid, plasmid_type), None
+    )
     if filename:
         with open(filename) as rlooper_probability_file:
             lines = rlooper_probability_file.readlines()
@@ -133,15 +137,23 @@ RLOOPER_FILE_GENE_MAP = {
 def aggregate_graph(
     plasmid_type, plasmid, folder, avg_only: bool = False, rlooper: bool = False
 ) -> None:
-    files = glob.glob(f"{folder}/{plasmid}*base_in_loop.xlsx")
+    print(folder)
+    subfolders = [f for f in pathlib.Path(folder).iterdir() if f.is_dir()]
+    files = []
+
+    for subfolder in subfolders:
+        files.extend(
+            glob.glob(f"{subfolder}/{plasmid}*{plasmid_type}*base_in_loop.xlsx")
+        )
 
     average_probabilities_list = None
+    print(plasmid_type, plasmid, files)
 
     for file in files:
         wb = openpyxl.load_workbook(file)
         ws = wb.active
 
-        m = re.match(r"^.*_w\d_(\d*)_", file)
+        m = re.match(r"^.*_w\d_(\d*)_", str(file))
         run_number = int(m[1])
 
         row_value_iter = iter(ws.values)
@@ -176,7 +188,9 @@ def aggregate_graph(
     div_by_file_len = lambda x: x / len(files)
     average_probabilities_list = list(map(div_by_file_len, average_probabilities_list))
 
-    wb = openpyxl.load_workbook(f"{plasmid}_{plasmid_type}_experimental.xlsx")
+    wb = openpyxl.load_workbook(
+        pathlib.Path("experimental") / f"{plasmid}_{plasmid_type}_experimental.xlsx"
+    )
     ws = wb.active
 
     row_value_iter = iter(ws.values)
@@ -229,7 +243,7 @@ def aggregate_graph(
 
     pyplot.plot()
 
-    m = re.search(r"p(\d*)_w(\d*)", folder)
+    m = re.search(r"p(\d*)_w(\d*)", str(folder))
 
     padding = m[1]
     width = m[2]
@@ -283,7 +297,9 @@ if __name__ == "__main__":
 
     for padding in [13]:
         for plasmid_type in plasmid_types:
-            folders = glob.glob(f"UNION_{plasmid_type}_p{padding}_w{WIDTH}")
+            union_folder_name = glob.glob(f"*{plasmid_type}*{plasmid_type}*")
+            print(union_folder_name)
+            folders = [union_folder_name[0]]
             plasmids = ["pFC8", "pFC53"]
 
             print(folders)

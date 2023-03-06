@@ -1,5 +1,4 @@
 import multiprocessing
-import importlib
 import sys
 import os
 import glob
@@ -7,32 +6,21 @@ import pathlib
 import dataclasses
 import shutil
 import json
+import configparser
+import random
 
 from typing import *
 
-region_extractor = importlib.import_module("01_regions_extractor")
-region_threshold = importlib.import_module("02_regions_threshold")
-training_set = importlib.import_module("03_training_set")
-grammar_dict = importlib.import_module("04_grammar_dict")
-union_dict = importlib.import_module("05_union_dict")
-grammar_word = importlib.import_module("06_grammar_word")
-grammar_training = importlib.import_module("06_grammar_training")
-probabilistic_language = importlib.import_module("07_probabilistic_language")
-in_loop_probs = importlib.import_module("08_in_loop_probs")
+import model.union_dict as union_dict
+import model.grammar_word as grammar_word
+import model.grammar_training as grammar_training
+import model.probabilistic_language as probabilistic_language
+import model.in_loop_probs as in_loop_probs
 
-PLASMID_1 = "pFC53_GYRASECR"
-PLASMID_2 = "pFC8_GYRASECR"
-WINDOW_LENGTH = 4
+NUMBER_OF_PROCESSES = 10
 
-START_INDEX_1 = 80
-END_INDEX_1 = 1829
-SEQ_LENGTH_1 = 1929
-START_INDEX_2 = 80
-END_INDEX_2 = 1512
-SEQ_LENGTH_2 = 1612
-NUMBER_OF_RUNS = 10
-
-PADDINGS = [13]
+RIGHT_PADDING = 100
+LEFT_PADDING = 80
 
 
 class SupressOutput:
@@ -47,7 +35,7 @@ class SupressOutput:
 
 
 @dataclasses.dataclass
-class WorkflowParameters:
+class UnionParameters:
     run_number: int
     plasmid_1: str
     plasmid_2: str
@@ -59,7 +47,7 @@ class WorkflowParameters:
     end_index_2: int
 
 
-def do_workflow(workflow_parameters: WorkflowParameters) -> None:
+def do_workflow(union_parameters: UnionParameters) -> None:
     (
         run_number,
         plasmid_1,
@@ -70,25 +58,52 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
         end_index_1,
         start_index_2,
         end_index_2,
-    ) = dataclasses.astuple(workflow_parameters)
+    ) = dataclasses.astuple(union_parameters)
 
     # TODO: RUN_NUMBER IN EACH FILENAME
-    print("RUNNING", dataclasses.astuple(workflow_parameters))
+    print("RUNNING", dataclasses.astuple(union_parameters))
     print(f"[{padding_length}] Running with padding value: {padding_length}")
 
-    # bed_extra_filename = f"{plasmid}_SUPERCOILED_p{padding_length}_w{window_length}_{run_number}.bed_extra.bed"
-    weight_xlsx_filename_1 = (
-        f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}_weight.xlsx"
+    plot_region1 = RIGHT_PADDING + end_index_1
+    plot_region2 = RIGHT_PADDING + end_index_2
+
+    random.seed(run_number * 100)
+
+    if not pathlib.Path(f"{plasmid_1}_w{window_length}_all_rloops.bed").is_file():
+        with open(f"{plasmid_1}_w{window_length}_all_rloops.bed", "w") as file_handle:
+            for x in range(
+                start_index_1 + window_length, end_index_1 - 2 * window_length
+            ):
+                for y in range(x + window_length, end_index_1 - window_length):
+                    if (y - x) % window_length == 0:
+                        file_handle.write(f"{plasmid_1}\t{x}\t{y}\n")
+    if not pathlib.Path(f"{plasmid_2}_w{window_length}_all_rloops.bed").is_file():
+        with open(f"{plasmid_2}_w{window_length}_all_rloops.bed", "w") as file_handle:
+            for x in range(
+                start_index_2 + window_length, end_index_2 - 2 * window_length
+            ):
+                for y in range(x + window_length, end_index_2 - window_length):
+                    if (y - x) % window_length == 0:
+                        file_handle.write(f"{plasmid_2}\t{x}\t{y}\n")
+
+    matches = glob.glob(
+        f"aggregate_{plasmid_1}_p{padding_length}_w{window_length}_runs_*"
     )
-    weight_xlsx_filename_2 = (
-        f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}_weight.xlsx"
+
+    assert len(matches) == 1, f"Found multiple choices for {plasmid_1}'s' folder."
+
+    plasmid1_folder_name = pathlib.Path(matches[0])
+
+    matches = glob.glob(
+        f"aggregate_{plasmid_2}_p{padding_length}_w{window_length}_runs_*"
     )
-    weight_shannon_entropy_xlsx_filename_1 = f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}_weight_shannon.xlsx"
-    weight_shannon_entropy_xlsx_filename_2 = f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}_weight_shannon.xlsx"
+    assert len(matches) == 1, f"Found multiple choices for {plasmid_2}'s' folder."
+
+    plasmid2_folder_name = pathlib.Path(matches[0])
+
     bed_extra_training_set_filename_1 = f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}.bed_extra_training-set.bed"
     bed_extra_training_set_filename_2 = f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}.bed_extra_training-set.bed"
-    directory_name_1 = f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}"
-    directory_name_2 = f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}"
+
     dict_shannon_xlsx_filename_1 = (
         f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx"
     )
@@ -113,13 +128,19 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     base_in_loop_2 = f"{plasmid_2}_union_SHANNON_p{padding_length}_w{window_length}_{run_number}_base_in_loop.XLSX"
     base_in_loop_no_xlsx_1 = f"{plasmid_1}_union_SHANNON_p{padding_length}_w{window_length}_{run_number}_base_in_loop"
     base_in_loop_no_xlsx_2 = f"{plasmid_2}_union_SHANNON_p{padding_length}_w{window_length}_{run_number}_base_in_loop"
-    input_file = f"{PLASMID_1}_{PLASMID_2}_union_w{WINDOW_LENGTH}_p{padding_length}_{run_number}_input.txt"
+    input_file = f"{plasmid_1}_{plasmid_2}_union_w{window_length}_p{padding_length}_{run_number}_input.txt"
 
     # COPY FILES THAT WILL BE NEEDED TO LOCAL DIR
 
     local_dir = pathlib.Path(".")
-    filedir_1 = f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}"
-    filedir_2 = f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}"
+    filedir_1 = (
+        plasmid1_folder_name
+        / f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}"
+    )
+    filedir_2 = (
+        plasmid2_folder_name
+        / f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}"
+    )
 
     try:
         shutil.copy(
@@ -156,27 +177,27 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
     # ADJUST BED FILE, THEN USE TRAINING SET BED FILE INSTEAD OF ENTIRE BED_EXTRA FILE.
 
     with open(
-        f"{PLASMID_1}_{PLASMID_2}_union_w{WINDOW_LENGTH}_p{padding_length}_{run_number}_input.txt",
+        f"{plasmid_1}_{plasmid_2}_union_w{window_length}_p{padding_length}_{run_number}_input.txt",
         "w",
     ) as file_handle:
         file_handle.write(
-            f"{plasmid_1}_p{padding_length}_w{WINDOW_LENGTH}_{run_number}_DICT_SHANNON.xlsx.json\n"
+            f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx.json\n"
         )
         file_handle.write(
-            f"{plasmid_1}_p{padding_length}_w{WINDOW_LENGTH}_{run_number}_DICT_SHANNON.xlsx\n"
+            f"{plasmid_1}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx\n"
         )
         file_handle.write(
-            f"{plasmid_2}_p{padding_length}_w{WINDOW_LENGTH}_{run_number}_DICT_SHANNON.xlsx.json\n"
+            f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx.json\n"
         )
         file_handle.write(
-            f"{plasmid_2}_p{padding_length}_w{WINDOW_LENGTH}_{run_number}_DICT_SHANNON.xlsx\n"
+            f"{plasmid_2}_p{padding_length}_w{window_length}_{run_number}_DICT_SHANNON.xlsx\n"
         )
 
     print(
         f"p[{padding_length}] w[{window_length}] run [{run_number}] Taking the union..."
     )
     union_dict.UnionDict.union_json(
-        f"{PLASMID_1}_{PLASMID_2}_union_w{WINDOW_LENGTH}_p{padding_length}_{run_number}_input.txt",
+        f"{plasmid_1}_{plasmid_2}_union_w{window_length}_p{padding_length}_{run_number}_input.txt",
         output_prefix="out_union_w"
         + str(window_length)
         + "_p"
@@ -305,7 +326,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
             all_rloops_filename_1,
             f"{plasmid_1}_w{window_length}_all_rloops.bed",
             # end_index - start_index,
-            SEQ_LENGTH_1,
+            plot_region1,
             start_index_1,
             end_index_1,
             prob_lang_filename_1,
@@ -322,7 +343,7 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
             all_rloops_filename_1,
             f"{plasmid_2}_w{window_length}_all_rloops.bed",
             # end_index - start_index,
-            SEQ_LENGTH_2,
+            plot_region2,
             start_index_2,
             end_index_2,
             prob_lang_filename_2,
@@ -399,50 +420,55 @@ def do_workflow(workflow_parameters: WorkflowParameters) -> None:
 
 
 def main() -> None:
-    with open(f"{PLASMID_1}_w{WINDOW_LENGTH}_all_rloops.bed", "w") as file_handle:
-        for x in range(START_INDEX_1 + WINDOW_LENGTH, END_INDEX_1 - 2 * WINDOW_LENGTH):
-            for y in range(x + WINDOW_LENGTH, END_INDEX_1 - WINDOW_LENGTH):
-                if (y - x) % WINDOW_LENGTH == 0:
-                    file_handle.write(f"{PLASMID_1}\t{x}\t{y}\n")
-    with open(f"{PLASMID_2}_w{WINDOW_LENGTH}_all_rloops.bed", "w") as file_handle:
-        for x in range(START_INDEX_2 + WINDOW_LENGTH, END_INDEX_2 - 2 * WINDOW_LENGTH):
-            for y in range(x + WINDOW_LENGTH, END_INDEX_2 - WINDOW_LENGTH):
-                if (y - x) % WINDOW_LENGTH == 0:
-                    file_handle.write(f"{PLASMID_2}\t{x}\t{y}\n")
+    config = configparser.ConfigParser()
+    config.read("union_workflow_settings.ini")
 
-    runs = [
-        WorkflowParameters(
-            r,
-            PLASMID_1,
-            PLASMID_2,
-            WINDOW_LENGTH,
-            p,
-            START_INDEX_1,
-            END_INDEX_1,
-            START_INDEX_2,
-            END_INDEX_2,
-        )
-        for r in range(NUMBER_OF_RUNS)
-        for p in PADDINGS
-    ]
+    window_length = int(config["Union Parameters"]["WindowLength"])
+    number_of_runs = int(config["Union Parameters"]["NumberOfRuns"])
+    padding = int(config["Union Parameters"]["Padding"])
+    plasmid_groups = config["Union Parameters"]["Plasmids"]
+    plasmid_tuples = []
 
-    with multiprocessing.Pool(5) as pool:
-        pool.map(do_workflow, runs)
+    if "," in plasmid_groups:
+        for pair in plasmid_groups.split(","):
+            assert len(pair.split()) == 2
+            plasmid_tuples.append(tuple(pair.split()))
+    else:
+        assert len(pair.split()) == 2
+        plasmid_tuples.append(tuple(pair.split()))
 
-
-"""
-    for r in range(NUMBER_OF_RUNS):
-        for p in PADDINGS:
-            do_workflow(WorkflowParameters(
+    for plasmid1, plasmid2 in plasmid_tuples:
+        runs = [
+            UnionParameters(
                 r,
-                PLASMID,
-                WINDOW_LENGTH,
-                p,
-                TRAINING_SET_LINES,
-                START_INDEX,
-                END_INDEX
-            ))
-"""
+                plasmid1,
+                plasmid2,
+                window_length,
+                padding,
+                int(config[plasmid1]["StartIndex"]),
+                int(config[plasmid1]["EndIndex"]),
+                int(config[plasmid2]["StartIndex"]),
+                int(config[plasmid2]["EndIndex"]),
+            )
+            for r in range(number_of_runs)
+        ]
+
+        with multiprocessing.Pool(NUMBER_OF_PROCESSES) as pool:
+            pool.map(do_workflow, runs)
+
+        run_folders = glob.glob(f"UNION_p{padding}_w{window_length}_*")
+        aggregate_folder_name = pathlib.Path(
+            f"aggregate_{plasmid1}_{plasmid2}_p{padding}_w{window_length}_runs_{len(run_folders)}"
+        )
+
+        try:
+            os.mkdir(aggregate_folder_name)
+        except FileExistsError:
+            pass
+
+        for run_folder in run_folders:
+            shutil.move(run_folder, aggregate_folder_name / run_folder)
+
 
 if __name__ == "__main__":
     main()
