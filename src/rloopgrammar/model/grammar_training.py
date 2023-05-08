@@ -170,7 +170,6 @@ class GrammarTraining:
             word = word.replace("\xce\xb14", "V")
             training_words.append(word)
 
-        print(alpha_counts, omega_counts)
         sigma_ct = 0
         sigma_hat_ct = 0
         gamma_ct = 0

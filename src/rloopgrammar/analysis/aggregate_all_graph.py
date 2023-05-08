@@ -38,8 +38,7 @@ def calculate_rmsd(exp: List[float], pred: List[float]):
 
 
 def calculate_mse(exp: List[float], pred: List[float]):
-    print(len(exp), len(pred))
-    assert len(exp) == len(pred)
+    assert len(exp) == len(pred), f"exp({len(exp)}) != pred({len(pred)})"
 
     mse = statistics.mean(((x[0] - x[1]) ** 2 for x in zip(exp, pred)))
 
@@ -63,7 +62,7 @@ def graph_rlooper_full_seq(plasmid_type, plasmid, expected):
             pyplot.plot(
                 list(range(1, len(gene_region_probability) + 1)),
                 gene_region_probability,
-                label="Rlooper (Full)",
+                label="R-looper (Full)",
             )
 
             mse = calculate_mse(expected, gene_region_probability)
@@ -71,7 +70,7 @@ def graph_rlooper_full_seq(plasmid_type, plasmid, expected):
             rsquared = calculate_rsquared(expected, gene_region_probability)
             kstest = scipy.stats.ks_2samp(expected, gene_region_probability)
 
-            return dict(mse=mse, rmsd=rmsd, rsquared=rsquared, kstest=kstest)
+            return dict(rmsd=rmsd)
 
 
 def graph_rlooper_gene(plasmid_type, plasmid, expected):
@@ -92,7 +91,7 @@ def graph_rlooper_gene(plasmid_type, plasmid, expected):
             pyplot.plot(
                 list(range(1, len(gene_region_probability) + 1)),
                 gene_region_probability,
-                label="Rlooper (Gene)",
+                label="R-looper (Gene)",
             )
 
             mse = calculate_mse(expected, gene_region_probability)
@@ -100,8 +99,14 @@ def graph_rlooper_gene(plasmid_type, plasmid, expected):
             rsquared = calculate_rsquared(expected, gene_region_probability)
             kstest = scipy.stats.ks_2samp(expected, gene_region_probability)
 
-            return dict(mse=mse, rmsd=rmsd, rsquared=rsquared, kstest=kstest)
+            return dict(rmsd=rmsd)
 
+
+REPLACE_PLASMID_TYPE_NAME = {
+    "SUPERCOILEDCR": "supercoiled",
+    "GYRASECR": "gyrase",
+    "LINEARIZED": "linear",
+}
 
 RLOOPER_FILE_FULL_SEQ_MAP = {
     (
@@ -139,12 +144,11 @@ def aggregate_graph(
 ) -> None:
     print(folder)
     subfolders = [f for f in pathlib.Path(folder).iterdir() if f.is_dir()]
+    print("subfolders", subfolders)
     files = []
 
     for subfolder in subfolders:
-        files.extend(
-            glob.glob(f"{subfolder}/{plasmid}*{plasmid_type}*base_in_loop.xlsx")
-        )
+        files.extend(glob.glob(f"{subfolder}/*base_in_loop.xlsx"))
 
     average_probabilities_list = None
     print(plasmid_type, plasmid, files)
@@ -154,7 +158,7 @@ def aggregate_graph(
         ws = wb.active
 
         m = re.match(r"^.*_w\d_(\d*)_", str(file))
-        run_number = int(m[1])
+        run_number = 0
 
         row_value_iter = iter(ws.values)
         next(row_value_iter)  # Skip the column header
@@ -189,7 +193,8 @@ def aggregate_graph(
     average_probabilities_list = list(map(div_by_file_len, average_probabilities_list))
 
     wb = openpyxl.load_workbook(
-        pathlib.Path("experimental") / f"{plasmid}_{plasmid_type}_experimental.xlsx"
+        pathlib.Path("experimental")
+        / f"{plasmid}_{plasmid_type}_experimental_test.xlsx"
     )
     ws = wb.active
 
@@ -245,21 +250,23 @@ def aggregate_graph(
 
     m = re.search(r"p(\d*)_w(\d*)", str(folder))
 
-    padding = m[1]
-    width = m[2]
+    padding = 13
+    width = 4
 
-    # pyplot.figtext(.75, .2, f"Width = {width}\nPadding = {padding}")
-    pyplot.legend()
+    # pyplot.figtext(0.695, 0.6, f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
+    pyplot.legend(title=f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
+
     pyplot.title(
-        f"{plasmid_type if 'CR' not in plasmid_type else plasmid_type[:-2]} Prediction on {plasmid} (pFC8 $\cup$ pFC53; $n={width}$, $p={padding}$)"
+        f"R-loop prediction in {REPLACE_PLASMID_TYPE_NAME[plasmid_type]} {plasmid} based on the union of dictionaries"
     )
-    pyplot.xlabel("Base Position")
+
+    pyplot.xlabel("Nucleotide position in gene")
     pyplot.ylabel("Probability")
 
     pyplot.gca().set_ylim(0, 1.0)
 
     pyplot.savefig(
-        f'union_{plasmid_type}_{plasmid}_p{padding}_w{width}{"" if not avg_only else "_avg"}.eps'
+        f'union_{plasmid_type}_{plasmid}_p{padding}_w{width}{"" if not avg_only else "_avg"}.png'
     )
 
     fig = pyplot.figure()
@@ -269,7 +276,7 @@ def aggregate_graph(
     pyplot.clf()
 
     return (
-        dict(mse=mse, rmsd=rmsd, rsquared=rsquared, kstest=kstest),
+        dict(rmsd=rmsd),
         rlooper_full_dict,
         rlooper_gene,
     )
@@ -281,29 +288,20 @@ GRAPH_RLOOPER = True
 GRAPH_AVG_ONLY = True
 
 if __name__ == "__main__":
-    plasmid_types = ["GYRASECR", "SUPERCOILEDCR", "LINEARIZED"]
+    plasmid_types = ["SUPERCOILEDCR"]
     table = prettytable.PrettyTable()
-    table.field_names = [
-        "Plasmid Type",
-        "Plasmid",
-        "Width",
-        "Padding",
-        "MSE",
-        "RMSD",
-        "RSQUARED",
-        "KS_2SAMP",
-    ]
+    table.field_names = ["Plasmid Type", "Plasmid", "RMSD"]
     table.align = "l"
 
     for padding in [13]:
         for plasmid_type in plasmid_types:
-            union_folder_name = glob.glob(f"*{plasmid_type}*{plasmid_type}*")
-            print(union_folder_name)
-            folders = [union_folder_name[0]]
             plasmids = ["pFC8", "pFC53"]
-
-            print(folders)
             for plasmid in plasmids:
+                union_folder_name = glob.glob(f"*_on_{plasmid}*")
+                print(union_folder_name)
+                folders = [union_folder_name[0]]
+                print(folders)
+
                 for folder in folders:
                     stats = aggregate_graph(
                         plasmid_type,
@@ -313,22 +311,25 @@ if __name__ == "__main__":
                         rlooper=GRAPH_RLOOPER,
                     )
 
-                    row = [plasmid_type, plasmid, WIDTH, padding]
+                    if plasmid_type == "LINEARIZED":
+                        plasmid_type_display = "LINEAR"
+                    else:
+                        plasmid_type_display = plasmid_type[:-2]
+
+                    row = [plasmid_type_display, plasmid]
                     row.extend(list(map(lambda x: x, stats[0].values())))
+
                     table.add_row(row)
 
                     if stats[1]:
-                        row = [plasmid_type + " (Rlooper)", plasmid, WIDTH, padding]
+                        row = [plasmid_type_display + " (R-looper Full)", plasmid]
+
                         row.extend(list(map(lambda x: x, stats[1].values())))
                         table.add_row(row)
 
                     if stats[2]:
-                        row = [
-                            plasmid_type + " (Rlooper Gene)",
-                            plasmid,
-                            WIDTH,
-                            padding,
-                        ]
+                        row = [plasmid_type_display + " (R-looper Gene)", plasmid]
+
                         row.extend(list(map(lambda x: x, stats[2].values())))
                         table.add_row(row)
 

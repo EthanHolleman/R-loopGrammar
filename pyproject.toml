@@ -6,7 +6,15 @@ build-backend = "hatchling.build"
 name = "rloopgrammar"
 version = "0.0.1"
 description = "R-loop grammar model."
-authors = [{name = "Jacob Lusk", email = "jplusk@ucdavis.edu"}]
+authors = [
+    {name = "Margherita Ferrari", email = "margherita.ferrari@umanitoba.ca"},
+    {name = "Jacob Lusk", email = "jplusk@ucdavis.edu"},
+    {name = "Svetlana Poznanovic", email = "spoznan@clemson.edu"},
+    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
+    {name = "Mariel Vazquez", email = "mariel@math.ucdavis.edu"},
+    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
+]
+
 readme = "README.md"
 keywords = ["rloop", "grammar"]
 license = {file = "LICENSE"}
@@ -16,7 +24,6 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "License :: OSI Approved :: MIT License",
     "Development Status :: 5 - Production/Stable",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -28,8 +35,12 @@ dependencies = [
 ]
 
 [project.scripts]
-rgrammar-run-workflow    = "rloopgrammar.run_workflow:main"
-rgrammar-union-workflow  = "rloopgrammar.union_workflow:main"
+rloop-grammar-build-model    = "rloopgrammar.build_model:main"
+rloop-grammar-union-models   = "rloopgrammar.union_models:main"
+rloop-grammar-predict        = "rloopgrammar.predict:main"
+
+rloop-grammar-graph-runs          = "rloopgrammar.analysis.aggregate_all_graphs:main"
+rloop-grammar-graph-probabilities = "rloopgrammar.analysis.probability_analysis_single_truncated:main"
 
 [project.optional-dependencies]
 dev = [
