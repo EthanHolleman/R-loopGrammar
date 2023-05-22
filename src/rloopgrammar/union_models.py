@@ -49,7 +49,7 @@ class UnionParameters:
 
 
 def build_union_model(up: UnionParameters) -> None:
-    run_number = up.plasmid_1_model_folder.parts[-1][-1]
+    run_number = up.plasmid_1_model_folder.parts[-1].split("_")[-1]
     run_folder = (
         up.union_collection_folder
         / f"UnionModel_{up.plasmid_1.name}_{up.plasmid_2.name}_p{up.padding_length}_w{up.window_length}_{run_number}"
@@ -234,19 +234,19 @@ def main() -> None:
 
         # sort by the run number
         model1_folders = sorted(
-            [x[1] for x in os.walk(model_folder_tuple[0])][0], key=lambda x: int(x[-1])
+            [x[1] for x in os.walk(model_folder_tuple[0])][0],
+            key=lambda x: int(x.split("_")[-1]),
         )
         model2_folders = sorted(
-            [x[1] for x in os.walk(model_folder_tuple[1])][0], key=lambda x: int(x[-1])
+            [x[1] for x in os.walk(model_folder_tuple[1])][0],
+            key=lambda x: int(x.split("_")[-1]),
         )
 
         assert len(model1_folders) == len(
             model2_folders
         ), "Model folder lengths don't match"
 
-        union_model_collection_folder = pathlib.Path(
-            f"{plasmid_tuple[0].name}_{plasmid_tuple[1].name}_p{padding_length}_w{window_length}_{len(model1_folders)}"
-        )
+        union_model_collection_folder = pathlib.Path(args.output_folder)
         os.mkdir(union_model_collection_folder)
 
         run_config = configparser.ConfigParser()

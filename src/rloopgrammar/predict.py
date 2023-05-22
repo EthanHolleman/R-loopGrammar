@@ -54,6 +54,7 @@ class PredictionParameters:
 
 def do_prediction(pp: PredictionParameters) -> None:
     plot_region = pp.plasmid.gene_start + pp.plasmid.gene_end
+    print(pp.plasmid.gene_start, pp.plasmid.gene_end, plot_region)
 
     run_folder = pp.prediction_collection_folder / str(
         pp.model_folder.parts[-1]

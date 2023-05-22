@@ -8,6 +8,7 @@ import math
 import random
 import logging
 import argparse
+import shutil
 
 from typing import *
 
@@ -56,6 +57,7 @@ class ModelParameters:
     padding_length: int
     training_set_percent: float
     seed_file: Optional[pathlib.Path]
+    training_set_file: Optional[pathlib.Path]
 
 
 def build_model(mp: ModelParameters) -> None:
@@ -134,24 +136,28 @@ def build_model(mp: ModelParameters) -> None:
     training_set_size = math.ceil(bed_file_length * (mp.training_set_percent / 100.0))
     logger.info("Training set size: {training_set_size}.")
 
-    with SupressOutput():
-        region_extractor.RegionsExtractor.extract_regions(
-            mp.plasmid.fasta_file,
-            mp.plasmid.bed_file,
-            mp.plasmid.gene_start,
-            mp.plasmid.gene_end,
-            window_length=mp.window_length,
-            num_regions=4,
-            padding=mp.padding_length,
-            bed_extra=True,
-            bed_extra_output=bed_extra_filename,
-            create_weights=False,
-        )
+    if not mp.training_set_file:
+        with SupressOutput():
+            region_extractor.RegionsExtractor.extract_regions(
+                mp.plasmid.fasta_file,
+                mp.plasmid.bed_file,
+                mp.plasmid.gene_start,
+                mp.plasmid.gene_end,
+                window_length=mp.window_length,
+                num_regions=4,
+                padding=mp.padding_length,
+                bed_extra=True,
+                bed_extra_output=bed_extra_filename,
+                create_weights=False,
+            )
 
-    logger.info("Creating training set.")
-    training_set.TrainingSet.training_set(
-        bed_extra_filename, training_set_size, bed_extra_training_set_filename
-    )
+        logger.info("Creating training set.")
+        training_set.TrainingSet.training_set(
+            bed_extra_filename, training_set_size, bed_extra_training_set_filename
+        )
+    else:
+        logger.info("Duplicating training set.")
+        shutil.copyfile(mp.training_set_file, bed_extra_training_set_filename)
 
     with SupressOutput():
         region_extractor.RegionsExtractor.extract_regions(
@@ -245,15 +251,29 @@ def main() -> None:
 
         get_model_files = lambda x: next(os.walk(pathlib.Path(args.duplicate) / x))[2]
         model_files_find = lambda y, z: list(filter(lambda x: y in x, z))[0]
-        seed_files = [
-            pathlib.Path(args.duplicate)
-            / x
-            / model_files_find("SEED", get_model_files(x))
-            for x in duplicate_collection_model_folders_sorted
-        ]
-        get_run_seed_file = lambda x: seed_files[x]
+        duplicate_training_set_instead = False
+
+        try:
+            seed_files = [
+                pathlib.Path(args.duplicate)
+                / x
+                / model_files_find("SEED", get_model_files(x))
+                for x in duplicate_collection_model_folders_sorted
+            ]
+            get_run_seed_file = lambda x: seed_files[x]
+        except IndexError:
+            training_set_files = [
+                pathlib.Path(args.duplicate)
+                / x
+                / model_files_find("bed_extra_training-set.bed", get_model_files(x))
+                for x in duplicate_collection_model_folders_sorted
+            ]
+            get_run_seed_file = lambda x: None
+            get_training_set_file = lambda x: training_set_files[x]
+
     else:
         get_run_seed_file = lambda x: None
+        get_training_set_file = lambda x: None
 
     model_plasmids: list[Plasmid] = [
         list(filter(lambda x: x.name == k, plasmids))[0] for k in model_plasmid_names
@@ -291,6 +311,7 @@ def main() -> None:
                 padding,
                 training_set_percent,
                 get_run_seed_file(run_number),
+                get_training_set_file(run_number),
             )
             for run_number in range(number_of_models)
             for padding in paddings

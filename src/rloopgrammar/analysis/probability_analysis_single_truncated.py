@@ -12,45 +12,28 @@ from pathlib import Path
 RUNS = 10
 
 
-def collect_probabilities(folder: str):
-    print(folder)
-    m = re.search(r"p(\d*)_w(\d*)", folder)
+def collect_probabilities(parent_folder: str):
+    import pathlib
 
-    padding = m[1]
-    width = m[2]
+    parent_folder = pathlib.Path(parent_folder)
 
-    run_folders = [
-        (
-            r,
-            Path(folder)
-            / Path("_".join(map(str, ["UNION", f"p{padding}", f"w{width}", r]))),
-        )
-        for r in range(RUNS)
-    ]
+    run_folders = enumerate(
+        sorted([x[1] for x in os.walk(parent_folder)][0], key=lambda x: int(x[-1]))
+    )
 
     S_data = []
     R_data = []
     Q_data = []
 
     for run, folder in run_folders:
-        probs_lang_filename = Path(
-            "_".join(
-                map(
-                    str,
-                    [
-                        "SHANNON",
-                        f"p{padding}",
-                        f"w{width}",
-                        f"{run}",
-                        "union",
-                        "probabilities.json",
-                    ],
-                )
-            )
-        )
+        model_files = next(os.walk(parent_folder / folder))[2]
+
+        model_files_find = lambda y: list(filter(lambda x: y in x, model_files))[0]
+
+        probs_lang_filename = model_files_find("union_probabilities")
 
         print(folder, probs_lang_filename)
-        with open(folder / probs_lang_filename, "r") as probs_file:
+        with open(parent_folder / folder / probs_lang_filename, "r") as probs_file:
             probs = json.load(probs_file)
 
             S_data.append(probs["S_probabilities"])
@@ -97,9 +80,9 @@ if __name__ == "__main__":
     colors = ["orange", "blue", "black"]
 
     folder_names = [
-        "aggregate_pFC53_GYRASECR_pFC8_GYRASECR_p13_w4_runs_10",
-        "aggregate_pFC53_SUPERCOILEDCR_pFC8_SUPERCOILEDCR_p13_w4_runs_10",
-        "aggregate_pFC53_LINEARIZED_pFC8_LINEARIZED_p13_w4_runs_10",
+        "UnionModel_pFC8_GYRASECR_pFC53_GYRASECR_p13_w4_10",
+        "UnionModel_pFC53_SUPERCOILEDCR_pFC8_SUPERCOILEDCR_p13_w4_10",
+        "UnionModel_pFC53_LINEARIZED_pFC8_LINEARIZED_p13_w4_10",
     ]
 
     collected_probabilities = []
@@ -121,13 +104,15 @@ if __name__ == "__main__":
     ]
     legend_elements.reverse()
 
+    pyplot.rcParams["font.family"] = "Times New Roman"
+
     fig = pyplot.figure(figsize=(18, 6))
 
     pyplot.title(TITLE, fontsize=20)
     pyplot.legend(
         loc="best",
         handles=legend_elements,
-        fontsize=13,
+        fontsize=12,
         title=f"pFC8 $\cup$ pFC53\n $n={4}$, $p={13}$",
         title_fontsize=13,
     )

@@ -5,6 +5,7 @@ import openpyxl
 import collections
 
 from typing import *
+from Bio.Seq import Seq
 
 
 @dataclasses.dataclass
@@ -39,13 +40,14 @@ def threshold_shannon(region_data_xlsx: str) -> Dict[int, List[ThresholdedRegion
 
             rescaled_weight = weight / max_weight
             entropy = -rescaled_weight * math.log(rescaled_weight, 10)
+            ntuple = str(Seq(row[0]).reverse_complement())
 
             if weight in thresholded_region_data:
                 entropy_sum += entropy
                 avg_entropy = entropy_sum / count
 
                 entry = ThresholdedRegionEntry(
-                    count, row[0], weight, rescaled_weight, entropy, avg_entropy
+                    count, ntuple, weight, rescaled_weight, entropy, avg_entropy
                 )
                 thresholded_region_data[weight].append(entry)
 
@@ -56,7 +58,7 @@ def threshold_shannon(region_data_xlsx: str) -> Dict[int, List[ThresholdedRegion
             avg_entropy = entropy_sum / count
 
             tre = ThresholdedRegionEntry(
-                count, row[0], weight, abs(rescaled_weight), abs(entropy), avg_entropy
+                count, ntuple, weight, abs(rescaled_weight), abs(entropy), avg_entropy
             )
             thresholded_region_data[weight] = [tre]
             count += 1

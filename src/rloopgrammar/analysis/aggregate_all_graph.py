@@ -220,6 +220,8 @@ def aggregate_graph(
     rsquared = calculate_rsquared(probabilities_list, average_probabilities_list)
     kstest = scipy.stats.ks_2samp(probabilities_list, average_probabilities_list)
 
+    pyplot.rcParams["font.family"] = "Times New Roman"
+
     pyplot.plot(
         list(range(1, len(probabilities_list) + 1)),
         probabilities_list,
@@ -240,7 +242,7 @@ def aggregate_graph(
         list(range(1, len(average_probabilities_list) + 1)),
         average_probabilities_list,
         "--",
-        label=f"Average",
+        label=f"R-loop grammar",
     )
 
     row_value_iter = iter(ws.values)
@@ -252,6 +254,16 @@ def aggregate_graph(
 
     padding = 13
     width = 4
+
+    pyplot.annotate("", xy=(0, 0), xytext=(0, 0.4), arrowprops=dict(arrowstyle="-"))
+    pyplot.annotate(
+        "",
+        xy=(100, 0.392),
+        xytext=(-10, 0.392),
+        textcoords="data",
+        xycoords="data",
+        arrowprops=dict(arrowstyle="->", connectionstyle="arc3"),
+    )
 
     # pyplot.figtext(0.695, 0.6, f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
     pyplot.legend(title=f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
@@ -288,16 +300,19 @@ GRAPH_RLOOPER = True
 GRAPH_AVG_ONLY = True
 
 if __name__ == "__main__":
-    plasmid_types = ["SUPERCOILEDCR"]
+    plasmid_types = ["SUPERCOILEDCR"]  # "GYRASECR", "LINEARIZED"]
     table = prettytable.PrettyTable()
     table.field_names = ["Plasmid Type", "Plasmid", "RMSD"]
     table.align = "l"
 
     for padding in [13]:
         for plasmid_type in plasmid_types:
-            plasmids = ["pFC8", "pFC53"]
+            plasmids = ["pFC53"]
             for plasmid in plasmids:
-                union_folder_name = glob.glob(f"*_on_{plasmid}*")
+                print(f"{plasmid_type}")
+                union_folder_name = glob.glob(
+                    f"UnionCollection2_{plasmid_type}*on_{plasmid}"
+                )
                 print(union_folder_name)
                 folders = [union_folder_name[0]]
                 print(folders)

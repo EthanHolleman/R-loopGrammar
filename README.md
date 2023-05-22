@@ -5,45 +5,64 @@
 
 _________________
 
-## Running the pipeline:
-
-To run the pipe line, you will need pFC53.fa and pFC8.fa fasta files.
-
-You will need to modify or create your own `workflow_settings.ini` file, this will contain information about the gene location, and fasta file for each plasmid that the pipeline will run on.
-
-Each `workflow_settings.ini` should contain a section for `Run Parameters`, e.g
-```text
-[Run Parameters]
-WindowLength = 4
-Paddings = 13
-NumberOfRuns = 10
-TrainingSetPercent = 10
-Plasmid = pFC53_SUPERCOILEDCR pFC8_SUPERCOILEDCR
+## Installation
+You can install directly from GitHub using the command below,
+```sh
+pip install git+https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git@experimental
 ```
-
-These parameters specify the plasmids, window length, various paddings, training set percentage, and the number of runs the pipeline will do.
-Each plasmid should have it's own section, e.g
-```text
-[pFC53_SUPERCOILED]
-StartIndex = 80
-EndIndex = 1829
-FastaFile = pFC53
+Or you can clone the repo and install from the repository itself.
+```sh
+git clone -b experimental https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git
+cd R-loopGrammar
+pip install .
 ```
-Each section will contain the plasmid's gene location and the associated fasta file.
+Both of these methods will install the depedencies themselves.
 
-To run the pipeline execute the following command,
-```text
-make run-pipeline
+## Usage
+
+After installation, you'll have access to the following programs,
+- rloop-grammar-build-model
+- rloop-grammar-union-models
+- rloop-grammar-predict
+
+These programs depend on a configuration file of plasmids/genes named `plasmids.ini`.
+
+This file will contain the information regarding the plasmids that each program operates on, 
+e.g.
 ```
-This will execute batches of runs in parallel spawning 10 processes for each batch. (This can be adjusted by modifying `NUMBER_OF_PROCESSES` in the `run_workflow.py` script)
+[Plasmid1]
+GeneStart = 80
+GeneEnd = 1829
+FastaFile = Plasmid1.fa
+BEDFile = Plasmid1.bed
 
-After execution, each run will be collected into folders according to run number, and then each run collected it's folder with respect to the plasmid, padding and width.
+[Plasmid2]
+GeneStart = 80
+GeneEnd = 1512
+FastaFile = Plasmid2.fa
+BEDFile = Plasmid2.bed
+```
+This file defines the start and end of the gene inside the plasmid (0-based indexing, start inclusive and end exclusive), the fasta file location, and the BED file containing the experimental R-loop data.
 
-_________________
+The BED files are of the form,
+```
+plasmid1_rloop1 85 125
+plasmid1_rloop2 67 342
+...
+```
+These will contain the experimental results where the first index and last index are where an R-loop has been experimentally found inside the given plasmid.
 
-### Running the union pipeline:
-
-To execute the `union_workflow.py` to union these runs together, we specify which runs we are merging by modifying the parameters in the `union_workflow.py` script.
-
+1. To build a model collection we run the following,
+```sh
+rloop-grammar-build-model ModelCollectionOutput_%plasmid_w%width_p%padding_%number_of_models --plasmids Plasmid1 Plasmid2 -tp 10 -c 10 -w 4 -p 13
+```
+2. To union two model collections together, we then run,
+```sh
+rloop-grammar-union-models UnionModelCollection_%plasmid1_%plasmid2_%number_of_models -i ModelCollectionOutput_Plasmid1_w4_p13_10 ModelCollectionOutput_Plasmid2_w4_p13_10
+```
+3. And finally we can then make a prediction.
+```sh
+rloop-grammar-predict UnionModelCollection_%plasmid1_%plasmid2_Prediction_on_%predict_plasmid_%number_of_models -i UnionModelCollection_Plasmid1_Plasmid2_10 -p Plasmid1
+```
 
 
