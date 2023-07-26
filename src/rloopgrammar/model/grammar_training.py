@@ -12,6 +12,8 @@ Copyright 2021 Svetlana Poznanovic
 
 """
 
+smoothing_parameter = 1
+
 
 class GrammarSymbol(str, enum.Enum):
     SIGMA = "s"
@@ -170,15 +172,15 @@ class GrammarTraining:
             word = word.replace("\xce\xb14", "V")
             training_words.append(word)
 
-        sigma_ct = 0
-        sigma_hat_ct = 0
-        gamma_ct = 0
-        delta_ct = 0
+        sigma_ct = smoothing_parameter
+        sigma_hat_ct = smoothing_parameter
+        gamma_ct = smoothing_parameter
+        delta_ct = smoothing_parameter
 
-        sigma_alpha_ct = 0
-        sigma_hat_alpha_ct = 0
-        gamma_alpha_ct = 0
-        delta_alpha_ct = 0
+        sigma_alpha_ct = smoothing_parameter
+        sigma_hat_alpha_ct = smoothing_parameter
+        gamma_alpha_ct = smoothing_parameter
+        delta_alpha_ct = smoothing_parameter
 
         # reverse each so we read from left to right
         for word in map(lambda x: x[::-1], training_words):
@@ -232,15 +234,15 @@ class GrammarTraining:
             for k, v in S_probabilities_counts.items()
         }
 
-        tau_ct = 0
-        tau_hat_ct = 0
-        rho_ct = 0
-        beta_ct = 0
+        tau_ct = smoothing_parameter
+        tau_hat_ct = smoothing_parameter
+        rho_ct = smoothing_parameter
+        beta_ct = smoothing_parameter
 
-        tau_omega_ct = 0
-        tau_hat_omega_ct = 0
-        rho_omega_ct = 0
-        beta_omega_ct = 0
+        tau_omega_ct = smoothing_parameter
+        tau_hat_omega_ct = smoothing_parameter
+        rho_omega_ct = smoothing_parameter
+        beta_omega_ct = smoothing_parameter
 
         for word in map(lambda x: x[::-1], training_words):
             after_alpha_to_omega_part = after_alpha_to_omega(word)
@@ -288,15 +290,15 @@ class GrammarTraining:
             for k, v in R_probabilities_counts.items()
         }
 
-        sigma_ct = 0
-        sigma_hat_ct = 0
-        gamma_ct = 0
-        delta_ct = 0
+        sigma_ct = smoothing_parameter
+        sigma_hat_ct = smoothing_parameter
+        gamma_ct = smoothing_parameter
+        delta_ct = smoothing_parameter
 
-        sigma_end_ct = 0
-        sigma_hat_end_ct = 0
-        gamma_end_ct = 0
-        delta_end_ct = 0
+        sigma_end_ct = smoothing_parameter
+        sigma_hat_end_ct = smoothing_parameter
+        gamma_end_ct = smoothing_parameter
+        delta_end_ct = smoothing_parameter
 
         # reverse each so we read from left to right
         for word in map(lambda x: x[::-1], training_words):

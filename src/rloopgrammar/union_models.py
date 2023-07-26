@@ -46,6 +46,7 @@ class UnionParameters:
     plasmid_2_model_folder: pathlib.Path
     window_length: int
     padding_length: int
+    method: str
 
 
 def build_union_model(up: UnionParameters) -> None:
@@ -85,6 +86,14 @@ def build_union_model(up: UnionParameters) -> None:
     )
     dict_shannon_json_filename_1 = (
         up.plasmid_1_model_folder / plasmid_1_model_files_find("DICT_SHANNON.xlsx.json")
+    )
+
+    weights_xlsx_filename_1 = up.plasmid_1_model_folder / plasmid_1_model_files_find(
+        "_weight_shannon.xlsx"
+    )
+
+    weights_xlsx_filename_2 = up.plasmid_2_model_folder / plasmid_2_model_files_find(
+        "_weight_shannon.xlsx"
     )
 
     dict_shannon_xlsx_filename_2 = (
@@ -131,11 +140,13 @@ def build_union_model(up: UnionParameters) -> None:
         "w",
     ) as file_handle:
         file_handle.write(f"{dict_shannon_json_filename_1}\n")
-        file_handle.write(f"{dict_shannon_xlsx_filename_1}\n")
+        file_handle.write(f"{weights_xlsx_filename_1}\n")
         file_handle.write(f"{dict_shannon_json_filename_2}\n")
-        file_handle.write(f"{dict_shannon_xlsx_filename_2}\n")
+        file_handle.write(f"{weights_xlsx_filename_2}\n")
 
-    union_dict.UnionDict.union_json(union_input_file, output_filename=union_dict_name)
+    union_dict.UnionDict.union_json(
+        union_input_file, output_filename=union_dict_name, method=up.method
+    )
 
     print("Extracting training set 1 words.")
 
@@ -186,6 +197,15 @@ def build_union_model(up: UnionParameters) -> None:
         if "probabilities" in k:
             for l, b in v.items():
                 probabilities_2[k][l] = (probabilities_2[k][l] + b) / 2
+                if probabilities_2[k][l] == 0:
+                    print(
+                        probabilities_filename_1,
+                        probabilities_filename_2,
+                        "\n",
+                        l,
+                        (probabilities_2[k][l] + b) / 2,
+                        "\n",
+                    )
 
     with open(av_probabilities_filename, "w") as fout:
         json.dump(probabilities_2, fout)
@@ -193,6 +213,7 @@ def build_union_model(up: UnionParameters) -> None:
 
 parser = argparse.ArgumentParser(prog=PROGRAM_NAME, description=DESCRIPTION)
 parser.add_argument("output_folder")
+parser.add_argument("-m", "--method", type=str)
 parser.add_argument("-i", "--input_folders", type=str, nargs="+")
 
 
@@ -278,6 +299,7 @@ def main() -> None:
                     / run_folder_tuple[1],
                     window_length=window_length,
                     padding_length=padding_length,
+                    method=args.method,
                 )
             )
 

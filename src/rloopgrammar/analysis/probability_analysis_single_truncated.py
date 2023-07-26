@@ -74,15 +74,15 @@ def collect_probabilities(parent_folder: str):
 
 
 # REPLACING THESE FOR GRAPH
-REPLACE = {"GYRASECR": "Gyrase", "SUPERCOILEDCR": "Supercoiled", "LINEARIZED": "Linear"}
+REPLACE = {"GYRASE": "Gyrase", "SUPERCOILEDCR": "Supercoiled", "LINEARIZED": "Linear"}
 
 if __name__ == "__main__":
     colors = ["orange", "blue", "black"]
 
     folder_names = [
-        "UnionModel_pFC8_GYRASECR_pFC53_GYRASECR_p13_w4_10",
-        "UnionModel_pFC53_SUPERCOILEDCR_pFC8_SUPERCOILEDCR_p13_w4_10",
-        "UnionModel_pFC53_LINEARIZED_pFC8_LINEARIZED_p13_w4_10",
+        "deterministic_UnionCollection_GYRASECR_runs_10",
+        "deterministic_UnionCollection_SUPERCOILEDCR_runs_10",
+        "deterministic_UnionCollection_LINEARIZED_runs_10",
     ]
 
     collected_probabilities = []
@@ -97,7 +97,7 @@ if __name__ == "__main__":
                 folder_names[i] = v
 
     title_names = ", ".join(folder_names)
-    TITLE = f"Production rule probabilities for the union of dictionaries"
+    TITLE = f"R-loop grammar (deterministic) production rule probabilities for the union of dictionaries"
 
     legend_elements = [
         Patch(facecolor=colors[i], label=folder_names[i]) for i in range(len(colors))
@@ -240,4 +240,4 @@ if __name__ == "__main__":
     pyplot.subplots_adjust(left=0.065, right=0.9875)
     pyplot.show()
 
-    fig.savefig(f'{"_".join(folder_names)}_single_trunc.eps', format="eps")
+    fig.savefig(f'{"_".join(folder_names)}_single_trunc.pdf', format="eps")

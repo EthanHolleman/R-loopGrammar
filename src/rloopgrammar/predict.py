@@ -104,39 +104,26 @@ def do_prediction(pp: PredictionParameters) -> None:
         / f"{pp.plasmid.name}_SHANNON_p{pp.padding_length}_w{pp.window_length}_base_in_loop"
     )
 
-    if not pathlib.Path(all_rloops_bed_filename).is_file():
-        with open(all_rloops_bed_filename, "w") as file_handle:
-            for x in range(
-                pp.plasmid.gene_start + pp.window_length,
-                pp.plasmid.gene_end - 2 * pp.window_length,
-            ):
-                for y in range(
-                    x + pp.window_length, pp.plasmid.gene_end - pp.window_length
-                ):
-                    if (y - x) % pp.window_length == 0:
-                        file_handle.write(f"{pp.plasmid.name}\t{x}\t{y}\n")
-
     logger.info("Finding word probabilities.")
 
-    if not pathlib.Path(all_rloops_filename).is_file():
-        logger.info("Extracting all words.")
-        grammar_word.GrammarWord.extract_word(
-            pp.plasmid.fasta_file,
-            all_rloops_bed_filename,
-            dict_shannon_json_filename,
-            pp.plasmid.gene_start,
-            pp.plasmid.gene_end,
-            pp.window_length,
-            str(all_rloops_filename),
-        )
+    logger.info("Extracting all words.")
+    grammar_word.GrammarWord.extract_word(
+        pp.plasmid.fasta_file,
+        all_rloops_bed_filename,
+        dict_shannon_json_filename,
+        pp.plasmid.gene_start,
+        pp.plasmid.gene_end,
+        pp.window_length,
+        str(all_rloops_filename),
+    )
 
-    with SupressOutput():
-        probabilistic_language.Probabilistic_Language.word_probabilities(
-            all_rloops_filename,
-            probabilities_filename,
-            pp.window_length,
-            str(prob_lang_filename),
-        )
+    # with SupressOutput():
+    probabilistic_language.Probabilistic_Language.word_probabilities(
+        all_rloops_filename,
+        probabilities_filename,
+        pp.window_length,
+        str(prob_lang_filename),
+    )
 
     logger.info("In loop probabilities.")
 
@@ -192,6 +179,19 @@ def main() -> None:
             number_of_models=len(model_folders),
         )
         os.mkdir(prediction_folder)
+
+        all_rloops_bed_filename = (
+            prediction_folder / f"{plasmid.name}_w{window_length}_all_rloops.bed"
+        )
+
+        with open(all_rloops_bed_filename, "w") as file_handle:
+            for x in range(
+                plasmid.gene_start + window_length,
+                plasmid.gene_end - 2 * window_length,
+            ):
+                for y in range(x + window_length, plasmid.gene_end - window_length):
+                    if (y - x) % window_length == 0:
+                        file_handle.write(f"{plasmid.name}\t{x}\t{y}\n")
 
         for model_folder in model_folders:
             relative_path_model_folder = model_collection_folder / model_folder

@@ -27,6 +27,34 @@ You should have received a copy of the GNU General Public License
 along with UnionDict.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import collections
+
+assignments_made = collections.defaultdict(lambda: 0)
+
+
+def binary_letter_assignment(letter1, letter2):
+    global assignments_made
+
+    letter_assignments = {
+        ("SIGMA", "SIGMA^"): "DELTA",
+        ("DELTA", "SIGMA"): "SIGMA",
+        ("DELTA", "SIGMA^"): "SIGMA^",
+        ("GAMMA", "SIGMA"): "SIGMA",
+        ("GAMMA", "SIGMA^"): "SIGMA^",
+        ("DELTA", "GAMMA"): "DELTA",
+        ("TAU", "TAU^"): "BETA",
+        ("BETA", "TAU"): "TAU",
+        ("BETA", "TAU^"): "TAU^",
+        ("RHO", "TAU"): "TAU",
+        ("RHO", "TAU^"): "TAU^",
+        ("BETA", "RHO"): "BETA",
+    }
+
+    assignment_key = tuple(sorted([letter1, letter2]))
+    assignments_made[f"{assignment_key} = {letter_assignments[assignment_key]}"] += 1
+
+    return letter_assignments[assignment_key]
+
 
 class UnionDict:
     # Works only if "i" is a basic type instance (str, int, ...)
@@ -176,7 +204,9 @@ class UnionDict:
 
     @classmethod
     # Compute union for two dictionaries
-    def __union_json(cls, grammar_dict_1, grammar_dict_2, weights_1, weights_2):
+    def __union_json(
+        cls, grammar_dict_1, grammar_dict_2, weights_1, weights_2, method="stochastic"
+    ):
         # Dictionary for random choices of symbols when max_weight_1 = max_weight_2
         random_relocation = {"region1": dict(), "region2_3": dict(), "region4": dict()}
         union_dict = {"region1": dict(), "region2_3": dict(), "region4": dict()}
@@ -238,19 +268,21 @@ class UnionDict:
                         and union_list.count(v) > 0
                         and not cls.__item_in_dict(v, random_relocation.get(k, dict()))
                     ):
-                        print(
-                            k
-                            + ": flip coin for "
-                            + str(v)
-                            + ", symbols "
-                            + str(list(funny_letters_lottery))
-                            + "\n"
-                        )
-                        # Pick one symbol randomly
-                        k2 = list(funny_letters_lottery)[
-                            random.randint(0, len(funny_letters_lottery) - 1)
-                        ]
-                        # Add v to the list of tuples corresponding to k2 in relocation dict
+                        assert len(funny_letters_lottery) == 2
+                        funny_letters_lottery_list = list(funny_letters_lottery)
+
+                        if method == "deterministic":
+                            k2 = binary_letter_assignment(
+                                funny_letters_lottery_list[0],
+                                funny_letters_lottery_list[1],
+                            )
+                        elif method == "stochastic":
+                            k2 = list(funny_letters_lottery)[
+                                random.randint(0, len(funny_letters_lottery) - 1)
+                            ]
+                        else:
+                            raise Exception(f"Unsupported method: {method}")
+
                         tmp_list = random_relocation[k].get(k2, list())
                         tmp_list.append(v)
                         random_relocation[k][k2] = tmp_list
@@ -496,13 +528,14 @@ class UnionDict:
 
     @classmethod
     # Compute union for input dictionaries
-    def union_json(cls, file_list_in, output_filename):
+    def union_json(cls, file_list_in, output_filename, method="stochastic"):
         with open(file_list_in, "r") as fin:
             json_in_1 = cls.__read_line_from_input_list(fin)
             xlsx_in_1 = cls.__read_line_from_input_list(fin)
             json_in_2 = cls.__read_line_from_input_list(fin)
             xlsx_in_2 = cls.__read_line_from_input_list(fin)
 
+            print(xlsx_in_1, xlsx_in_2)
             with open(json_in_1, "r") as fin1, open(json_in_2, "r") as fin2:
                 grammar_dict_1 = json.load(fin1)
                 grammar_dict_2 = json.load(fin2)
@@ -533,7 +566,7 @@ class UnionDict:
             }
 
             union_dict, union_dict_weights = cls.__union_json(
-                grammar_dict_1, grammar_dict_2, weights_1, weights_2
+                grammar_dict_1, grammar_dict_2, weights_1, weights_2, method
             )
             json_in_2 = cls.__read_line_from_input_list(fin, False)
 
@@ -555,13 +588,16 @@ class UnionDict:
                     "r4": wb2_r4_values,
                 }
                 union_dict, union_dict_weights = cls.__union_json(
-                    union_dict, grammar_dict_2, union_dict_weights, weights_2
+                    union_dict, grammar_dict_2, union_dict_weights, weights_2, method
                 )
 
                 json_in_2 = cls.__read_line_from_input_list(fin, False)
 
         with open(output_filename, "w") as fout:
             json.dump(union_dict, fout)
+
+        global assignments_made
+        print(json.dumps(assignments_made, indent=4))
 
 
 if __name__ == "__main__":

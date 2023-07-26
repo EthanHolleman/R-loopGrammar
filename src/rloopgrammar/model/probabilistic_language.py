@@ -190,7 +190,6 @@ class Probabilistic_Language:
 
     @classmethod
     def word_probabilities(cls, words_in, probabs_in, width, out_file="output"):
-
         with open(probabs_in, "r", encoding="utf-8") as file_handle:
             probabilities = json.load(file_handle)
 
@@ -206,14 +205,22 @@ class Probabilistic_Language:
         language = translate_greek(language_greek, width)
 
         probabilities = [probability(probabilities, word) for word in language]
+        filtered_probabilities = list(filter(lambda x: x > 0, probabilities))
 
-        partition_function = 0
-        for term in probabilities:
-            partition_function += term
+        assert (
+            len(filtered_probabilities) > 0
+        ), f"All probabilities are 0. #language: {len(language)} {(words_in, probabs_in)}"
 
+        partition_function = sum(probabilities)
+        assert partition_function > 0
+
+        print("#probabilities:", len(probabilities))
         print("The partition function is: ", partition_function)
 
-        probs = [term / partition_function for term in probabilities]
+        if partition_function > 0:
+            probs = [term / partition_function for term in probabilities]
+        else:
+            probs = probabilities
 
         with open(out_file, "a") as file_handle:
             for i in probs:

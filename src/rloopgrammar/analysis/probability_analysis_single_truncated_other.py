@@ -2,6 +2,7 @@ import os
 import re
 import matplotlib.pyplot as pyplot
 import matplotlib.colors as mcolors
+import json
 
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
@@ -10,96 +11,120 @@ from pathlib import Path
 
 RUNS = 10
 
-#REPLACING THESE FOR GRAPH
-REPLACE = {
-    "GYRASECR" : "GYRASE",
-    "SUPERCOILEDCR": "SUPERCOILED" 
-}
 
-def collect_probabilities(folder: str):
-    print(folder)
-    m = re.search(r'p(\d*)_w(\d*)', folder)
+def collect_probabilities(parent_folder: str):
+    import pathlib
 
-    padding = m[1]
-    width = m[2]
+    parent_folder = pathlib.Path(parent_folder)
+    print(list(os.walk(parent_folder))[0])
 
-    run_folders = [(r, Path(folder) / Path('_'.join(map(str, ["UNION", f'p{padding}', f'w{width}', r])))) for r in range(RUNS)]
+    run_folders = enumerate(
+        sorted([x[1] for x in os.walk(parent_folder)][0], key=lambda x: int(x[-1]))
+    )
 
-    S_data = [[] for _ in range(4)]
-    P_data = [[] for _ in range(5)]
-    R_data = [[] for _ in range(4)]
-    L_data = [[] for _ in range(5)]
-    Q_data = [[] for _ in range(4)]
-    T_data = [[] for _ in range(5)]
+    S_data = []
+    R_data = []
+    Q_data = []
 
     for run, folder in run_folders:
-        probs_lang_filename = Path('_'.join(map(str, 
-            ['SHANNON', f'p{padding}', f'w{width}', f'{run}', 'union', 'probabilities.py']))
-        )
+        model_files = next(os.walk(parent_folder / folder))[2]
+
+        model_files_find = lambda y: list(filter(lambda x: y in x, model_files))[0]
+
+        probs_lang_filename = model_files_find("union_probabilities")
 
         print(folder, probs_lang_filename)
-        with open(folder / probs_lang_filename, 'r') as probs_file:
-            probs = list(map(lambda x: float(x.split('=')[1]), probs_file.readlines()))
+        with open(parent_folder / folder / probs_lang_filename, "r") as probs_file:
+            probs = json.load(probs_file)
 
-            S = probs[0:4]
+            S_data.append(probs["S_probabilities"])
+            R_data.append(probs["R_probabilities"])
+            Q_data.append(probs["Q_probabilities"])
 
-            for i, prob in enumerate(S):
-                S_data[i].append(prob)
+    import collections
+    import functools
+    import operator
 
-            P = probs[4:9]
+    with open("out_averaged_probabilities.json", "w") as outfile:
+        avg_s_probabilities = dict(
+            functools.reduce(operator.add, map(collections.Counter, S_data))
+        )
+        avg_r_probabilities = dict(
+            functools.reduce(operator.add, map(collections.Counter, R_data))
+        )
+        avg_q_probabilities = dict(
+            functools.reduce(operator.add, map(collections.Counter, Q_data))
+        )
+        json.dump(
+            {
+                "S_probabilities": {
+                    k: v / len(S_data) for k, v in avg_s_probabilities.items()
+                },
+                "R_probabilities": {
+                    k: v / len(R_data) for k, v in avg_r_probabilities.items()
+                },
+                "Q_probabilities": {
+                    k: v / len(Q_data) for k, v in avg_q_probabilities.items()
+                },
+            },
+            outfile,
+            indent=4,
+        )
 
-            for i, prob in enumerate(P):
-                P_data[i].append(prob)
+    return (S_data, R_data, Q_data)
 
-            R = probs[9:13]
 
-            for i, prob in enumerate(R):
-                R_data[i].append(prob)
-
-            L = probs[13:18]
-            for i, prob in enumerate(L):
-                L_data[i].append(prob)
-
-            Q = probs[18:22]
-            for i, prob in enumerate(Q):
-                Q_data[i].append(prob)
-
-            T = probs[22:28]
-            for i, prob in enumerate(T):
-                T_data[i].append(prob)
-
-    return (S_data[2:], P_data[2:], R_data[2:], L_data[2:], Q_data[2:], T_data[2:])
-
+# REPLACING THESE FOR GRAPH
+REPLACE = {"GYRASE": "Gyrase", "SUPERCOILEDCR": "Supercoiled", "LINEARIZED": "Linear"}
 
 if __name__ == "__main__":
-    colors = ['orange', 'blue', 'black']
+    colors = ["orange", "blue", "black"]
 
-    folder_names = ["UNION_GYRASECR_p13_w4", "UNION_SUPERCOILEDCR_p13_w4", "UNION_LINEARIZED_p13_w4"]
+    folder_names = [
+        "UnionCollection_GYRASECR_runs_10",
+        "UnionCollection_SUPERCOILEDCR_runs_10",
+        "UnionCollection_LINEARIZED_runs_10",
+    ]
+
     collected_probabilities = []
 
     for folder in folder_names:
         collected_probabilities.append(collect_probabilities(folder))
-    
-    folder_names = list(map(lambda x: x.split('_')[1], folder_names))
+
+    folder_names = list(map(lambda x: x.split("_")[2], folder_names))
     for i in range(len(folder_names)):
         for k, v in REPLACE.items():
             if k in folder_names[i]:
                 folder_names[i] = v
 
-    title_names = ', '.join(folder_names)
-    TITLE = f"Production Rule Probabilities for the Union (pFC8 $\cup$ pFC53; $n=4$, $p=13$)"
+    title_names = ", ".join(folder_names)
+    TITLE = f"Production rule probabilities for the union of dictionaries"
 
-    legend_elements = [Patch(facecolor=colors[i], label=folder_names[i]) for i in range(len(colors))]
+    legend_elements = [
+        Patch(facecolor=colors[i], label=folder_names[i]) for i in range(len(colors))
+    ]
     legend_elements.reverse()
 
-    fig = pyplot.figure(figsize=(24,6))
+    pyplot.rcParams["font.family"] = "Times New Roman"
 
-    pyplot.suptitle(TITLE, fontsize=20)
-    pyplot.legend(loc='best', handles=legend_elements)
-    pyplot.ylabel('Probability', fontsize=20)
+    fig = pyplot.figure(figsize=(18, 6))
+
+    pyplot.title(TITLE, fontsize=20)
+    pyplot.legend(
+        loc="best",
+        handles=legend_elements,
+        fontsize=12,
+        title=f"pFC8 $\cup$ pFC53\n $n={4}$, $p={13}$",
+        title_fontsize=13,
+    )
+
+    pyplot.ylabel("Probability", fontsize=20)
     pyplot.xticks(fontsize=16)
     pyplot.yticks(fontsize=16)
-    pyplot.xlabel('Production Rules', fontsize=20)
+    pyplot.xlabel("Production rule", fontsize=20)
+
+    # remove hard coded values
+    # pyplot.figtext(0.905, 0.130, f"pFC8 $\cup$ pFC53\n $n={4}$, $p={13}$", fontsize=14)
 
     """
     for i, col_p in enumerate(collected_probabilities):
@@ -108,75 +133,112 @@ if __name__ == "__main__":
         ] if i == 0 else [''])
     """
 
-    p_bplots = []
-    for i, col_p in enumerate(collected_probabilities):
-        positions = list(map(lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-1 ** i))), [2, 3, 4]))
-        p_bplots.append(pyplot.boxplot(col_p[1], widths=0.8 / len(col_p), positions=positions, showfliers=False, whiskerprops=dict(linestyle='dashed'), patch_artist=True, labels=[
-            r'$P \rightarrow \gamma \; P$',
-            r'$P \rightarrow \delta \; P$',
-            r'$P \rightarrow \alpha \; R$'
-        ] if i == 1 else [''] * 3))
+    pyplot.margins(x=0)
 
-    for bplot, color in zip(p_bplots, colors):
-        for patch in bplot['boxes']:
+    xposition = [1.75, 3.25, 4.75, 4.75 + 1.5, 4.75 + 3]
+    for xc in xposition:
+        pyplot.axvline(x=xc, color="k", linestyle="--", alpha=0.3)
+
+    s_bplots = []
+    for i, col_p in enumerate(collected_probabilities):
+        print("p_bplots", len(col_p[0]))
+        positions = list(
+            map(
+                lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-(1**i)))),
+                [1, 2.5],
+            )
+        )
+        s_bplots.append(
+            pyplot.boxplot(
+                [
+                    [entry["S_gamma_S"] for entry in col_p[0]],
+                    [entry["S_delta_S"] for entry in col_p[0]],
+                ],
+                widths=0.8 / len(col_p),
+                positions=positions,
+                showfliers=False,
+                whiskerprops=dict(linestyle="dashed"),
+                patch_artist=True,
+                labels=[
+                    r"$S \rightarrow \gamma \; S$",
+                    r"$S \rightarrow \delta \; S$",
+                ]
+                if i == 1
+                else [""] * 2,
+            )
+        )
+
+    for bplot, color in zip(s_bplots, colors):
+        for patch in bplot["boxes"]:
             patch.set_facecolor(color)
 
-    #axes[0][1].legend([bp["boxes"][0] for bp in p_bplots], folder_names, loc='upper right')
+    # axes[0][1].legend([bp["boxes"][0] for bp in p_bplots], folder_names, loc='upper right')
 
     r_bplots = []
     for i, col_p in enumerate(collected_probabilities):
-        positions = list(map(lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-1 ** i))), [5, 6]))
-        r_bplots.append(pyplot.boxplot(col_p[2], widths=0.8 / len(col_p), positions=positions, showfliers=False, whiskerprops=dict(linestyle='dashed'), patch_artist=True, labels=[
-            r'$R \rightarrow \rho \; L$',
-            r'$R \rightarrow \beta \; L$'
-        ] if i == 1 else [''] * 2))
+        positions = list(
+            map(
+                lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-(1**i)))),
+                [4, 5.5],
+            )
+        )
+        r_bplots.append(
+            pyplot.boxplot(
+                [
+                    [entry["R_rho_R"] for entry in col_p[1]],
+                    [entry["R_beta_R"] for entry in col_p[1]],
+                ],
+                widths=0.8 / len(col_p),
+                positions=positions,
+                showfliers=False,
+                whiskerprops=dict(linestyle="dashed"),
+                patch_artist=True,
+                labels=[
+                    r"$R \rightarrow \rho \; R$",
+                    r"$R \rightarrow \beta \; R$",
+                ]
+                if i == 1
+                else [""] * 2,
+            )
+        )
 
     for bplot, color in zip(r_bplots, colors):
-        for patch in bplot['boxes']:
+        for patch in bplot["boxes"]:
             patch.set_facecolor(color)
-
-
-    l_bplots = []
-    for i, col_p in enumerate(collected_probabilities):
-        positions = list(map(lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-1 ** i))), [7, 8, 9]))
-        l_bplots.append(pyplot.boxplot(col_p[3], widths=0.8 / len(col_p), positions=positions, showfliers=False, whiskerprops=dict(linestyle='dashed'), patch_artist=True, labels=[
-            r'$L \rightarrow \rho \; L$',
-            r'$L \rightarrow \beta \; L$',
-            r'$L \rightarrow \omega \; Q$'
-        ] if i == 1 else [''] * 3))
-
-    for bplot, color in zip(l_bplots, colors):
-        for patch in bplot['boxes']:
-            patch.set_facecolor(color)
-
 
     q_bplots = []
     for i, col_p in enumerate(collected_probabilities):
-        positions = list(map(lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-1 ** i))), [10, 11]))
-        q_bplots.append(pyplot.boxplot(col_p[4], widths=0.8 / len(col_p), positions=positions, showfliers=False, whiskerprops=dict(linestyle='dashed'), patch_artist=True, labels=[
-            r'$Q \rightarrow \gamma \; T$',
-            r'$Q \rightarrow \delta \; T$'
-        ] if i == 1 else [''] * 2))
+        positions = list(
+            map(
+                lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-(1**i)))),
+                [7, 8.5],
+            )
+        )
+        q_bplots.append(
+            pyplot.boxplot(
+                [
+                    [entry["Q_gamma_Q"] for entry in col_p[2]],
+                    [entry["Q_delta_Q"] for entry in col_p[2]],
+                ],
+                widths=0.8 / len(col_p),
+                positions=positions,
+                showfliers=False,
+                whiskerprops=dict(linestyle="dashed"),
+                patch_artist=True,
+                labels=[
+                    r"$Q \rightarrow \gamma \; Q$",
+                    r"$Q \rightarrow \delta \; Q$",
+                ]
+                if i == 1
+                else [""] * 2,
+            )
+        )
 
     for bplot, color in zip(q_bplots, colors):
-        for patch in bplot['boxes']:
+        for patch in bplot["boxes"]:
             patch.set_facecolor(color)
 
-    t_bplots = []
-    for i, col_p in enumerate(collected_probabilities):
-        positions = list(map(lambda x: (x + (((0.8 / len(col_p) + 0.05) * (i - 1)) * (-1 ** i))), [12, 13, 14]))
-        t_bplots.append(pyplot.boxplot(col_p[5], widths=0.8 / len(col_p), positions=positions, showfliers=False, whiskerprops=dict(linestyle='dashed'), patch_artist=True, labels=[
-            r'$T \rightarrow \gamma \; T$',
-            r'$T \rightarrow \delta \; T$',
-            r'$T \rightarrow \epsilon$'
-        ] if i == 1 else [''] * 3))
-
-    for bplot, color in zip(t_bplots, colors):
-        for patch in bplot['boxes']:
-            patch.set_facecolor(color)
-
-
-    pyplot.subplots_adjust(left=0.045, right=0.9875)
+    pyplot.subplots_adjust(left=0.065, right=0.9875)
     pyplot.show()
 
-    fig.savefig(f'{"_".join(folder_names)}_single_trunc_other.png', dpi=1200)
+    fig.savefig(f'{"_".join(folder_names)}_single_trunc.eps', format="eps")
