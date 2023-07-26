@@ -8,11 +8,11 @@ _________________
 ## Installation
 You can install directly from GitHub using the command below,
 ```sh
-pip install git+https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git@experimental
+pip install git+https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git
 ```
 Or you can clone the repo and install from the repository itself.
 ```sh
-git clone -b experimental https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git
+git clone https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar.git
 cd R-loopGrammar
 pip install .
 ```
