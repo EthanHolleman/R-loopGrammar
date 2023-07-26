@@ -100,9 +100,9 @@ class RegionsExtractor:
 
     @classmethod
     def extract_regions(cls, fasta_in, bed_in, start_idx, end_idx, window_length=5, out_pref='output',
-                        num_regions=4, padding=0, bed_extra=False):
+                        num_regions=4, padding=0, bed_extra=False, bed_extra_output=None, create_weights=True):
         regions = {}
-        out_file = out_pref + '_w' + str(window_length) + '_weight.xlsx'
+        out_file = out_pref
 
         for i in range(num_regions):
             regions['Region ' + str(i + 1)] = dict()
@@ -116,7 +116,10 @@ class RegionsExtractor:
             rloops_count = 0
 
             if bed_extra:
-                fout = open(bed_in + '_extra.bed', 'w')
+                if not bed_extra_output:
+                    fout = open(bed_in + '_extra.bed', 'w')
+                else:
+                    fout = open(bed_extra_output, 'w')
 
             while line:
                 parts = line.strip().split('\t')
@@ -166,6 +169,9 @@ class RegionsExtractor:
 
             if bed_extra:
                 fout.close()
+
+        if not create_weights:
+            return
 
         for r in regions.values():
             for k, v in r.items():

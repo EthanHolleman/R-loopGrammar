@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rloopgrammar"
+version = "0.0.1"
+description = "R-loop grammar model."
+authors = [
+    {name = "Margherita Ferrari", email = "margherita.ferrari@umanitoba.ca"},
+    {name = "Jacob Lusk", email = "jplusk@ucdavis.edu"},
+    {name = "Svetlana Poznanovic", email = "spoznan@clemson.edu"},
+    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
+    {name = "Mariel Vazquez", email = "mariel@math.ucdavis.edu"},
+    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
+]
+
+readme = "README.md"
+keywords = ["rloop", "grammar"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Development Status :: 5 - Production/Stable",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "packaging",
+    "openpyxl",
+    "matplotlib",
+]
+
+[project.scripts]
+rloop-grammar-build-model    = "rloopgrammar.build_model:main"
+rloop-grammar-union-models   = "rloopgrammar.union_models:main"
+rloop-grammar-predict        = "rloopgrammar.predict:main"
+
+rloop-grammar-graph-runs          = "rloopgrammar.analysis.aggregate_all_graphs:main"
+rloop-grammar-graph-probabilities = "rloopgrammar.analysis.probability_analysis_single_truncated:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.urls]
+Home = "https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar"
+
+

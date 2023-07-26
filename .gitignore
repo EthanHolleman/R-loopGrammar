@@ -1,0 +1,13 @@
+*.fa
+*.bed
+*.xlsx
+*.json
+*.txt
+*.png
+*.dna
+*.tikz
+*.tikzstyles
+*.wig
+*.eps
+*.ini
+*.zip
