@@ -77,12 +77,14 @@ def graph_rlooper_full_seq(axis, plasmid_type, plasmid, expected, normalize=Fals
                     gene_region_probability, expected
                 )
 
+            """
             axis.plot(
                 list(range(1, len(gene_region_probability) + 1)),
                 gene_region_probability,
                 label="R-looper (full)",
                 color="tan",
             )
+            """
 
             mse = calculate_mse(expected, gene_region_probability)
             rmsd = calculate_rmsd(expected, gene_region_probability)
@@ -113,12 +115,14 @@ def graph_rlooper_gene(axis, plasmid_type, plasmid, expected, normalize=False):
                     gene_region_probability, expected
                 )
 
+            """
             axis.plot(
                 list(range(1, len(gene_region_probability) + 1)),
                 gene_region_probability,
                 label="R-looper (gene)",
                 color="tab:orange",
             )
+            """
 
             mse = calculate_mse(expected, gene_region_probability)
             rmsd = calculate_rmsd(expected, gene_region_probability)
@@ -131,7 +135,7 @@ def graph_rlooper_gene(axis, plasmid_type, plasmid, expected, normalize=False):
 
 REPLACE_PLASMID_TYPE_NAME = {
     "SUPERCOILEDCR": "supercoiled",
-    "GYRASECR": "gyrase",
+    "GYRASECR": "hyper-negatively supercoiled (gyrase)",
     "LINEARIZED": "linear",
 }
 
@@ -258,18 +262,21 @@ def get_average_probabilities(folder):
         probabilities_list = [
             probabilities[k] for k in range(1, len(probabilities.keys()) + 1)
         ]
+
         if not average_probabilities_list:
-            average_probabilities_list = probabilities_list
-        else:
             average_probabilities_list = [
-                sum(value)
-                for value in zip(average_probabilities_list, probabilities_list)
+                list() for i in range(len(probabilities_list))
             ]
+        else:
+            for i in range(len(average_probabilities_list)):
+                average_probabilities_list[i].append(probabilities_list[i])
 
-    div_by_file_len = lambda x: x / len(files)
-    average_probabilities_list = list(map(div_by_file_len, average_probabilities_list))
-
-    return average_probabilities_list
+    return [sum(p) / len(p) for p in average_probabilities_list], [
+        scipy.stats.t.interval(
+            alpha=0.83, df=len(p) - 1, loc=numpy.mean(p), scale=scipy.stats.sem(p)
+        )
+        for p in average_probabilities_list
+    ]
 
 
 def graph_correlation(plasmid_type, plasmid, expected, predicted, data_type, index=[3]):
@@ -295,8 +302,13 @@ def aggregate_graph(
     rlooper: bool = False,
     normalize: bool = False,
 ) -> None:
-    deterministic_probabilities_avg = get_average_probabilities(deterministic_folder)
-    stochastic_probabilities_avg = get_average_probabilities(stochastic_folder)
+    (
+        deterministic_probabilities_avg,
+        deterministic_intervals,
+    ) = get_average_probabilities(deterministic_folder)
+    stochastic_probabilities_avg, stochastic_intervals = get_average_probabilities(
+        stochastic_folder
+    )
 
     wb = openpyxl.load_workbook(
         pathlib.Path("experimental")
@@ -319,6 +331,7 @@ def aggregate_graph(
         probabilities[k] for k in range(1, len(probabilities.keys()) + 1)
     ]
 
+    """
     graph_correlation(
         plasmid_type,
         plasmid,
@@ -333,6 +346,7 @@ def aggregate_graph(
         stochastic_probabilities_avg,
         "stochastic",
     )
+    """
 
     if normalize:
         deterministic_probabilities_avg = normalize_data(
@@ -385,12 +399,30 @@ def aggregate_graph(
         label=f"R-loop grammar (deterministic)",
     )
 
+    axis.fill_between(
+        list(range(1, len(deterministic_probabilities_avg) + 1)),
+        [interval[0] for interval in deterministic_intervals],
+        [interval[1] for interval in deterministic_intervals],
+        color="tab:red",
+        alpha=0.5,
+    )
+
+    """
     axis.plot(
         list(range(1, len(deterministic_probabilities_avg) + 1)),
         stochastic_probabilities_avg,
         color="tab:pink",
         label=f"R-loop grammar (stochastic)",
     )
+
+    axis.fill_between(
+        list(range(1, len(deterministic_probabilities_avg) + 1)),
+        [interval[0] for interval in stochastic_intervals],
+        [interval[1] for interval in stochastic_intervals],
+        color="tab:pink",
+        alpha=0.5,
+    )
+    """
 
     row_value_iter = iter(ws.values)
     next(row_value_iter)  # Skip the column header
@@ -427,7 +459,8 @@ def aggregate_graph(
     axis.legend(title=f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
 
     axis.set_title(
-        f"R-loop prediction in {REPLACE_PLASMID_TYPE_NAME[plasmid_type]} {plasmid} based on the union of dictionaries"
+        f"R-loop prediction in {REPLACE_PLASMID_TYPE_NAME[plasmid_type]} {plasmid} based on the union of dictionaries",
+        fontsize=9 if plasmid_type == "GYRASECR" else 12,
     )
 
     axis.set_xlabel("Nucleotide position in gene")
@@ -515,7 +548,7 @@ def main():
                     graph_statistic="rmsd",
                 )
 
-            fig.savefig(plasmid_type + "_rmsd.pdf")
+            fig.savefig(plasmid_type + "normalized_rmsd.png")
 
     with open("results.json", "w") as results_file:
         results_file.write(
