@@ -9,6 +9,7 @@ import math
 import statistics
 import numpy
 import json
+import numpy as np
 
 import scipy.stats
 
@@ -170,6 +171,41 @@ RLOOPER_FILE_GENE_MAP = {
 }
 
 
+def get_experimental(bed_file, gene_location):
+    seq_len = sum(gene_location)
+
+    with open(bed_file, "r") as fin:
+        lines = fin.readlines()
+        rloops = tuple(map(lambda x: tuple(map(int, x.split()[1:3])), lines))
+
+    summary = np.zeros(seq_len)
+
+    for start, end in rloops:
+        # switch to right to left
+        new_start = seq_len - end
+        new_end = seq_len - start
+
+        loop_vector = np.zeros(seq_len)
+
+        # fill in vector with 1's
+        for index in range(seq_len):
+            if index >= new_start and index < new_end:
+                loop_vector[index] = 1
+
+        summary += loop_vector
+
+    probabilities = summary[gene_location[0] : gene_location[1]] / len(rloops)
+    intervals = [
+        (
+            (x / len(rloops) + scipy.stats.sem([0] * (len(rloops) - x) + [1] * x)),
+            (x / len(rloops) - scipy.stats.sem([0] * (len(rloops) - x) + [1] * x)),
+        )
+        for x in map(int, summary[gene_location[0] : gene_location[1]])
+    ]
+
+    return probabilities, intervals
+
+
 def grouped_bar_chart(
     axis,
     all_statistics,
@@ -271,10 +307,8 @@ def get_average_probabilities(folder):
             for i in range(len(average_probabilities_list)):
                 average_probabilities_list[i].append(probabilities_list[i])
 
-    return [sum(p) / len(p) for p in average_probabilities_list], [
-        scipy.stats.t.interval(
-            alpha=0.83, df=len(p) - 1, loc=numpy.mean(p), scale=scipy.stats.sem(p)
-        )
+    return [numpy.mean(p) for p in average_probabilities_list], [
+        (numpy.mean(p) + scipy.stats.sem(p), numpy.mean(p) - scipy.stats.sem(p))
         for p in average_probabilities_list
     ]
 
@@ -310,43 +344,10 @@ def aggregate_graph(
         stochastic_folder
     )
 
-    wb = openpyxl.load_workbook(
-        pathlib.Path("experimental")
-        / f"{plasmid}_{plasmid_type}_experimental_test.xlsx"
+    probabilities_list, experimental_intervals = get_experimental(
+        f"{plasmid}_{plasmid_type}_training.bed",
+        (80, 1512) if plasmid == "pFC8" else (80, 1829),
     )
-    ws = wb.active
-
-    row_value_iter = iter(ws.values)
-    next(row_value_iter)  # Skip the column header
-
-    probabilities = collections.defaultdict(lambda: 0)
-    for row in row_value_iter:
-        base_position, probability = row
-        base_position = int(base_position)
-        probability = float(probability)
-
-        probabilities[base_position] = probability
-
-    probabilities_list = [
-        probabilities[k] for k in range(1, len(probabilities.keys()) + 1)
-    ]
-
-    """
-    graph_correlation(
-        plasmid_type,
-        plasmid,
-        probabilities_list,
-        deterministic_probabilities_avg,
-        "deterministic",
-    )
-    graph_correlation(
-        plasmid_type,
-        plasmid,
-        probabilities_list,
-        stochastic_probabilities_avg,
-        "stochastic",
-    )
-    """
 
     if normalize:
         deterministic_probabilities_avg = normalize_data(
@@ -380,6 +381,16 @@ def aggregate_graph(
         label=f"Experimental",
     )
 
+    """
+    axis.fill_between(
+        list(range(1, len(probabilities_list) + 1)),
+        [interval[0] for interval in experimental_intervals],
+        [interval[1] for interval in experimental_intervals],
+        color="tab:blue",
+        alpha=0.5,
+    )
+    """
+
     rlooper_full_dict = None
     if rlooper:
         rlooper_full_dict = graph_rlooper_full_seq(
@@ -392,6 +403,7 @@ def aggregate_graph(
             axis, plasmid_type, plasmid, probabilities_list, normalize=normalize
         )
 
+    """
     axis.plot(
         list(range(1, len(deterministic_probabilities_avg) + 1)),
         deterministic_probabilities_avg,
@@ -406,8 +418,8 @@ def aggregate_graph(
         color="tab:red",
         alpha=0.5,
     )
-
     """
+
     axis.plot(
         list(range(1, len(deterministic_probabilities_avg) + 1)),
         stochastic_probabilities_avg,
@@ -422,12 +434,6 @@ def aggregate_graph(
         color="tab:pink",
         alpha=0.5,
     )
-    """
-
-    row_value_iter = iter(ws.values)
-    next(row_value_iter)  # Skip the column header
-
-    # pyplot.plot()
 
     padding = 13
     width = 4
@@ -459,7 +465,7 @@ def aggregate_graph(
     axis.legend(title=f"pFC8 $\cup$ pFC53\n $n={width}$, $p={padding}$")
 
     axis.set_title(
-        f"R-loop prediction in {REPLACE_PLASMID_TYPE_NAME[plasmid_type]} {plasmid} based on the union of dictionaries",
+        f"TRAIN R-loop prediction in {REPLACE_PLASMID_TYPE_NAME[plasmid_type]} {plasmid} based on the union of dictionaries",
         fontsize=9 if plasmid_type == "GYRASECR" else 12,
     )
 
@@ -548,7 +554,7 @@ def main():
                     graph_statistic="rmsd",
                 )
 
-            fig.savefig(plasmid_type + "normalized_rmsd.png")
+            fig.savefig(plasmid_type + "_rmsd.png")
 
     with open("results.json", "w") as results_file:
         results_file.write(
