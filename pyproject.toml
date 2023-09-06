@@ -36,6 +36,7 @@ dependencies = [
 
 [project.scripts]
 rloop-grammar-build-model    = "rloopgrammar.build_model:main"
+rloop-grammar-build-kfold-model = "rloopgrammar.kfold_model:main"
 rloop-grammar-union-models   = "rloopgrammar.union_models:main"
 rloop-grammar-predict        = "rloopgrammar.predict:main"
 
