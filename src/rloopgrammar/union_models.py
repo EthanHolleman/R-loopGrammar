@@ -7,6 +7,7 @@ import json
 import configparser
 import logging
 import argparse
+import random
 
 from typing import *
 
@@ -57,6 +58,8 @@ def build_union_model(up: UnionParameters) -> None:
     )
 
     print(f"Building Union Model {run_number}")
+
+    random.seed(int(run_number))
 
     os.mkdir(run_folder)
 
