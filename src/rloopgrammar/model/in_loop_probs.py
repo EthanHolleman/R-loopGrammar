@@ -127,11 +127,11 @@ class Loop_probabilities:
                 if (index >= initial) and (index < final):
                     loop_vec[index] = 1
 
-            float_array = loop_vec.astype(np.float)
+            float_array = loop_vec.astype(np.float64)
             return float_array
 
         summary = np.array([0] * seq_len)
-        summary = summary.astype(np.float)
+        summary = summary.astype(np.float64)
 
         for j in range(len(bed_all_rloops)):
             summary += (
