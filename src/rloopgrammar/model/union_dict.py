@@ -217,7 +217,7 @@ class UnionDict:
             for sub_k, sub_v in grammar_dict_1.get(k, dict()).items():
                 tmp = set(sub_v)
                 tmp.update(grammar_dict_2.get(k, dict()).get(sub_k, list()))
-                union_list = list(tmp)
+                union_list = sorted(list(tmp))
 
                 for v in list(union_list):
                     # Lottery for tuples having distinct symbols in dict_1 and dict_2 but same max weight
@@ -269,7 +269,7 @@ class UnionDict:
                         and not cls.__item_in_dict(v, random_relocation.get(k, dict()))
                     ):
                         assert len(funny_letters_lottery) == 2
-                        funny_letters_lottery_list = list(funny_letters_lottery)
+                        funny_letters_lottery_list = sorted(list(funny_letters_lottery))
 
                         if method == "deterministic":
                             k2 = binary_letter_assignment(
@@ -277,7 +277,7 @@ class UnionDict:
                                 funny_letters_lottery_list[1],
                             )
                         elif method == "stochastic":
-                            k2 = list(funny_letters_lottery)[
+                            k2 = funny_letters_lottery_list[
                                 random.randint(0, len(funny_letters_lottery) - 1)
                             ]
                         else:

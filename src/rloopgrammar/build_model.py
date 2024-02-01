@@ -83,15 +83,17 @@ def build_model(mp: ModelParameters) -> None:
 
     if mp.seed_file:
         with open(mp.seed_file, "rb") as seed_file_handle:
-            seed = seed_file_handle.read()
+            seed_bytes = seed_file_handle.read()
     else:
-        seed = os.urandom(32)
+        seed_bytes = os.urandom(32)
 
+    int.from_bytes(seed_bytes, "little")
+    seed = seed_bytes
     random.seed(seed)
 
     seed_filename = str(
         run_folder
-        / f"{mp.plasmid.name}_p{mp.padding_length}_w{mp.window_length}_{mp.run_number}_SEED.txt"
+        / f"{mp.plasmid.name}_p{mp.padding_length}_w{mp.window_length}_{mp.run_number}_SEED.b"
     )
 
     with open(seed_filename, "wb") as seed_file:
@@ -246,7 +248,7 @@ def main() -> None:
         number_of_models = len(duplicate_collection_model_folders)
 
         duplicate_collection_model_folders_sorted = sorted(
-            duplicate_collection_model_folders, key=lambda x: int(x[-1])
+            duplicate_collection_model_folders, key=lambda x: int(x.split("_")[-1])
         )
 
         get_model_files = lambda x: next(os.walk(pathlib.Path(args.duplicate) / x))[2]
@@ -261,6 +263,9 @@ def main() -> None:
                 for x in duplicate_collection_model_folders_sorted
             ]
             get_run_seed_file = lambda x: seed_files[x]
+            get_training_set_file = lambda x: None
+            print("Copying seed.")
+
         except IndexError:
             training_set_files = [
                 pathlib.Path(args.duplicate)
@@ -270,6 +275,7 @@ def main() -> None:
             ]
             get_run_seed_file = lambda x: None
             get_training_set_file = lambda x: training_set_files[x]
+            print("Copying training set.")
 
     else:
         get_run_seed_file = lambda x: None
