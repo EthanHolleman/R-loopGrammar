@@ -54,23 +54,25 @@ These will contain the experimental results where the first index and last index
 
 1. To build a model collection we run the following,
 ```sh
-rloop-grammar-build-model ModelCollectionOutput_%plasmid_w%width_p%padding_%number_of_models --plasmids Plasmid1 Plasmid2 -tp 10 -c 10 -w 4 -p 13
+rloop-grammar-build-model Collection_Plasmid1_runs_30 -c 30 -p 13 -w 4 --plasmids Plasmid1 -tp 10
 ```
 * `--plasmids` The plasmids which to build the model from, as defined in `plasmids.ini`.
 * `-tp` The training set precentage to use for the accomponing BED file for each plasmid.
 * `-c` The number of runs to generate for each model collection.
 * `-w` The k-mer size.
 * `-p` The padding used for the sliding windows in the critical regions.
+* `-d` (Optional) To duplicate a run utilizing the same seed or training set, use this option to select a model to copy from; this will override `-c`.
 
 2. To union two model collections together, we then run,
 ```sh
-rloop-grammar-union-models UnionModelCollection_%plasmid1_%plasmid2_%number_of_models -i ModelCollectionOutput_Plasmid1_w4_p13_10 ModelCollectionOutput_Plasmid2_w4_p13_10
+rloop-grammar-union-models UnionCollection_Plasmid1_Plasmid2 -m stochastic -i Collection_Plasmid1_runs_30 Collection_Plasmid2_runs_30
 ```
 * `-i` The two input plasmids which are used to build the union model.
+* `-m` The method used to take the union, the current supported options are stochastic and deterministic.
    
 3. And finally we can then make a prediction.
 ```sh
-rloop-grammar-predict UnionModelCollection_%plasmid1_%plasmid2_Prediction_on_%predict_plasmid_%number_of_models -i UnionModelCollection_Plasmid1_Plasmid2_10 -p Plasmid1
+rloop-grammar-predict UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -i UnionCollection_Plasmid1_Plasmid2 --plasmids Plasmid3
 ```
 * `-i` The input model used to build the prediction.
 * `-p` The plasmid used to predict upon.
