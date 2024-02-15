@@ -70,10 +70,15 @@ rloop-grammar-union-models UnionCollection_Plasmid1_Plasmid2 -m stochastic -i Co
 * `-i` The two input plasmids which are used to build the union model.
 * `-m` The method used to take the union, the current supported options are stochastic and deterministic.
    
-3. And finally we can then make a prediction.
+3. Then we can make a prediction.
 ```sh
 rloop-grammar-predict UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -i UnionCollection_Plasmid1_Plasmid2 --plasmids Plasmid3
 ```
 * `-i` The input model used to build the prediction.
 * `-p` The plasmid used to predict upon.
 
+4. And finally we can graph the prediction.
+```sh
+rloop-grammar-graph-prediction UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -n Prediction_Plasmid3
+```
+* `-n` The name displayed on the graph.
