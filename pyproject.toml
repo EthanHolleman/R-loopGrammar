@@ -40,8 +40,7 @@ rloop-grammar-build-kfold-model = "rloopgrammar.kfold_model:main"
 rloop-grammar-union-models   = "rloopgrammar.union_models:main"
 rloop-grammar-predict        = "rloopgrammar.predict:main"
 
-rloop-grammar-graph-runs          = "rloopgrammar.analysis.aggregate_all_graphs:main"
-rloop-grammar-graph-probabilities = "rloopgrammar.analysis.probability_analysis_single_truncated:main"
+rloop-grammar-graph-prediction    = "rloopgrammar.graph_prediction:main"
 
 [project.optional-dependencies]
 dev = [
