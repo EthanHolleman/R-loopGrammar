@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import importlib
-import sys
 import json
 import enum
-
+import gmpy2
 
 """
 Script to train a grammar based on a set of  words for R-loops.
@@ -15,6 +13,12 @@ Copyright 2021 Svetlana Poznanovic
 
 """
 
+def from_gmpy(dct):
+    for k, v in dct.items():
+        if isinstance(v, str):
+            n, m = tuple(map(int, v.split("/")))
+            dct[k] = gmpy2.mpq(n, m)
+    return dct
 
 class GrammarSymbol(str, enum.Enum):
     SIGMA = "s"
@@ -191,7 +195,7 @@ class Probabilistic_Language:
     @classmethod
     def word_probabilities(cls, words_in, probabs_in, width, out_file="output"):
         with open(probabs_in, "r", encoding="utf-8") as file_handle:
-            probabilities = json.load(file_handle)
+            probabilities = json.load(file_handle, object_hook=from_gmpy)
 
         with open(words_in, "r", encoding="utf-8") as file:
             lines = file.readlines()
@@ -217,10 +221,7 @@ class Probabilistic_Language:
         print("#probabilities:", len(probabilities))
         print("The partition function is: ", partition_function)
 
-        if partition_function > 0:
-            probs = [term / partition_function for term in probabilities]
-        else:
-            probs = probabilities
+        probs = [float(term / partition_function) for term in probabilities]
 
         with open(out_file, "a") as file_handle:
             for i in probs:

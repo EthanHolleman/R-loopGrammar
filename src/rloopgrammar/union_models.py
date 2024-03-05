@@ -8,6 +8,7 @@ import configparser
 import logging
 import argparse
 import random
+import gmpy2
 
 from typing import *
 
@@ -26,6 +27,18 @@ CONFIG_MODEL_PARAMETER_NAME = "Model Parameters"
 PROGRAM_NAME = pathlib.Path(sys.argv[0]).parts[-1][:-4]
 DESCRIPTION = "Build a hybrid model based off the union of two dictionaries."
 
+class GMPYEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, gmpy2.mpq):
+            return str(obj)
+
+
+def from_gmpy(dct):
+    for k, v in dct.items():
+        if isinstance(v, str):
+            n, m = tuple(map(int, v.split("/")))
+            dct[k] = gmpy2.mpq(n, m)
+    return dct
 
 class SupressOutput:
     def __init__(self):
@@ -191,14 +204,15 @@ def build_union_model(up: UnionParameters) -> None:
     print(f"Finding average probabilities.")
 
     with open(probabilities_filename_1, "r", encoding="utf-8") as file_handle:
-        probabilities_1 = json.load(file_handle)
+        probabilities_1 = json.load(file_handle, object_hook=from_gmpy)
 
     with open(probabilities_filename_2, "r", encoding="utf-8") as file_handle:
-        probabilities_2 = json.load(file_handle)
+        probabilities_2 = json.load(file_handle, object_hook=from_gmpy)
 
     for k, v in probabilities_1.items():
-        if "probabilities" in k:
+        if "probabilities" in k and "counts" not in k:
             for l, b in v.items():
+                print(k, l, "dividing", probabilities_2[k][l], b, "result", (probabilities_2[k][l] + b) / 2)
                 probabilities_2[k][l] = (probabilities_2[k][l] + b) / 2
                 if probabilities_2[k][l] == 0:
                     print(
@@ -211,7 +225,7 @@ def build_union_model(up: UnionParameters) -> None:
                     )
 
     with open(av_probabilities_filename, "w") as fout:
-        json.dump(probabilities_2, fout)
+        json.dump(probabilities_2, fout, cls=GMPYEncoder, ensure_ascii=False, indent=4)
 
 
 parser = argparse.ArgumentParser(prog=PROGRAM_NAME, description=DESCRIPTION)

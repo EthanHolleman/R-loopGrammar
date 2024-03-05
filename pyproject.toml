@@ -32,6 +32,7 @@ dependencies = [
     "packaging",
     "openpyxl",
     "matplotlib",
+    "gmpy2"
 ]
 
 [project.scripts]

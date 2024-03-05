@@ -3,6 +3,7 @@ import argparse
 import enum
 import json
 import collections
+import gmpy2
 
 """
 Script to train a grammar based on a set of  words for R-loops.
@@ -13,6 +14,12 @@ Copyright 2021 Svetlana Poznanovic
 """
 
 smoothing_parameter = 1
+
+
+class GMPYEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, gmpy2.mpq):
+            return str(obj)
 
 
 class GrammarSymbol(str, enum.Enum):
@@ -228,9 +235,9 @@ class GrammarTraining:
         S_probabilities = {
             k
             if "alpha" not in k
-            else alter_key_name(k): (v / float(total_len))
+            else alter_key_name(k): gmpy2.mpq(v, total_len)
             if "alpha" not in k
-            else (v / float(total_len) / width)
+            else gmpy2.mpq(v, total_len) / width
             for k, v in S_probabilities_counts.items()
         }
 
@@ -284,9 +291,9 @@ class GrammarTraining:
         R_probabilities = {
             k
             if "omega" not in k
-            else alter_key_name(k): (v / float(total_len))
+            else alter_key_name(k): gmpy2.mpq(v, total_len)
             if "omega" not in k
-            else (v / float(total_len) / width)
+            else gmpy2.mpq(v, total_len) / width
             for k, v in R_probabilities_counts.items()
         }
 
@@ -339,7 +346,7 @@ class GrammarTraining:
         }
 
         Q_probabilities = {
-            k: (v / float(total_len)) for k, v in Q_probabilities_counts.items()
+            k: gmpy2.mpq(v, total_len) for k, v in Q_probabilities_counts.items()
         }
 
         with open(out_file, "w", encoding="utf-8") as file_handle:
@@ -352,7 +359,7 @@ class GrammarTraining:
                 Q_probabilities=Q_probabilities,
             )
 
-            json.dump(data, file_handle, ensure_ascii=False, indent=4)
+            json.dump(data, file_handle, ensure_ascii=False, indent=4, cls=GMPYEncoder)
 
 
 if __name__ == "__main__":
