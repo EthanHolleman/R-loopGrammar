@@ -209,14 +209,17 @@ class Probabilistic_Language:
         language = translate_greek(language_greek, width)
 
         probabilities = [probability(probabilities, word) for word in language]
+
+        """
         filtered_probabilities = list(filter(lambda x: x > 0, probabilities))
 
         assert (
             len(filtered_probabilities) > 0
         ), f"All probabilities are 0. #language: {len(language)} {(words_in, probabs_in)}"
+        """
 
         partition_function = sum(probabilities)
-        assert partition_function > 0
+        assert(partition_function > 0, "Partition function is 0")
 
         print("#probabilities:", len(probabilities))
         print("The partition function is: ", partition_function)
