@@ -28,7 +28,7 @@ def get_average_probabilities(folder):
     files = []
 
     for subfolder in subfolders:
-        files.extend(glob.glob(f"{subfolder}/*base_in_loop.xlsx"))
+        files.extend(glob.glob(f"{subfolder}/*base_in_loop*.XLSX"))
 
     average_probabilities_list = None
 
