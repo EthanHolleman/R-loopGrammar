@@ -117,16 +117,17 @@ class Loop_probabilities:
             prb = line.strip()
             probs.append(float(prb))
 
-        def convert_coords(start, end):
-            initial = seq_len - end[1]
-            final = seq_len - start[0]
+        def convert_coords(s, e):
+            initial = seq_len - e
+            final = seq_len - s
 
             return initial, final
 
         def loop_location(rloop_location):
             loop_vec = np.array([0] * seq_len)
 
-            initial, final = convert_coords(rloop_location[1], rloop_location[0])
+            initial = seq_len - rloop_location[1]
+            final = seq_len - rloop_location[0]
 
             for index in range(seq_len):
                 if (index >= initial) and (index < final):
