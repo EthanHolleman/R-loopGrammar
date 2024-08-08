@@ -1,5 +1,5 @@
 ## Experimental data set:
-[Fasta & BED Files](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/fasta_bed.zip)
+[Fasta & BED files](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/fasta_bed.zip)
 
 ## Dependencies:
 - [Python3](https://www.python.org/downloads/)
