@@ -32,7 +32,8 @@ dependencies = [
     "packaging",
     "openpyxl",
     "matplotlib",
-    "gmpy2"
+    "gmpy2",
+    "xlsxwriter"
 ]
 
 [project.scripts]
