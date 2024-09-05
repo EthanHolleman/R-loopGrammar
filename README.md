@@ -95,6 +95,45 @@ rloop-grammar-graph-prediction UnionCollection_Plasmid1_Plasmid2_predict_on_Plas
 ```
 * `-n` The name displayed on the graph.
 
+## Reproduce model data
+
+If you would like to reproduce the model data found [here](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/model_data.zip), download the zip file.
+We will be using the random seed for each run to recreate the data utilizing the `-d` duplicate option when building the model.
+
+First we need to patition the bed-files utilizing the [training data](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/training-data.zip) seed.
+The `make_training.py` script will partition the BED files into three sepearate sets utilizing the seed file. We will be using the first partition to build our model.
+
+The `plasmids.ini` will expect the BED files to be located in a folder called `bed-files`, also with the FASTA files in `fasta-files`.
+You can find the `plasmids.ini` file also in the `training-data.zip`.
+
+The following Makefile can be used to then recreate the model.
+```
+all: models union predict
+
+models:
+	rloop-grammar-build-model new_Collection_pFC53_SUPERCOILEDCR_runs_30 -c 30 -p 13 -w 4 --plasmids pFC53_SUPERCOILEDCR_training -tp 10 -d original_Collection_pFC53_SUPERCOILEDCR_runs_30
+	rloop-grammar-build-model new_Collection_pFC8_SUPERCOILEDCR_runs_30 -c 30 -p 13 -w 4 --plasmids pFC8_SUPERCOILEDCR_training -tp 10 -d original_Collection_pFC8_SUPERCOILEDCR_runs_30
+	rloop-grammar-build-model new_Collection_pFC53_GYRASECR_runs_30 -c 30 -p 13 -w 4 --plasmids pFC53_GYRASECR_training -tp 10 -d original_Collection_pFC53_GYRASECR_runs_30
+	rloop-grammar-build-model new_Collection_pFC8_GYRASECR_runs_30 -c 30 -p 13 -w 4 --plasmids pFC8_GYRASECR_training -tp 10 -d original_Collection_pFC8_GYRASECR_runs_30
+	rloop-grammar-build-model new_Collection_pFC53_LINEARIZED_runs_30 -c 30 -p 13 -w 4 --plasmids pFC53_LINEARIZED_training -tp 10 -d original_Collection_pFC53_LINEARIZED_runs_30
+	rloop-grammar-build-model new_Collection_pFC8_LINEARIZED_runs_30 -c 30 -p 13 -w 4 --plasmids pFC8_LINEARIZED_training -tp 10 -d original_Collection_pFC8_LINEARIZED_runs_30
+
+union:
+	rloop-grammar-union-models new_UnionCollection_SUPERCOILEDCR_runs_30 -m stochastic -i new_Collection_pFC53_SUPERCOILEDCR_runs_30 new_Collection_pFC8_SUPERCOILEDCR_runs_30
+	rloop-grammar-union-models new_UnionCollection_GYRASECR_runs_30 -m stochastic -i new_Collection_pFC53_GYRASECR_runs_30 new_Collection_pFC8_GYRASECR_runs_30
+	rloop-grammar-union-models new_UnionCollection_LINEARIZED_runs_30 -m stochastic -i new_Collection_pFC53_LINEARIZED_runs_30 new_Collection_pFC8_LINEARIZED_runs_30
+
+predict:
+	rloop-grammar-predict new_UnionCollection_SUPERCOILEDCR_predict_on_pFC53 -i new_UnionCollection_SUPERCOILEDCR_runs_30 --plasmids pFC53_SUPERCOILEDCR
+	rloop-grammar-predict new_UnionCollection_SUPERCOILEDCR_predict_on_pFC8 -i new_UnionCollection_SUPERCOILEDCR_runs_30 --plasmids pFC8_SUPERCOILEDCR
+	rloop-grammar-predict new_UnionCollection_GYRASECR_predict_on_pFC53 -i new_UnionCollection_GYRASECR_runs_30 --plasmids pFC53_GYRASECR
+	rloop-grammar-predict new_UnionCollection_GYRASECR_predict_on_pFC8 -i new_UnionCollection_GYRASECR_runs_30 --plasmids pFC8_GYRASECR
+	rloop-grammar-predict new_UnionCollection_LINEARIZED_predict_on_pFC53 -i new_UnionCollection_LINEARIZED_runs_30 --plasmids pFC53_LINEARIZED
+	rloop-grammar-predict new_UnionCollection_LINEARIZED_predict_on_pFC8 -i new_UnionCollection_LINEARIZED_runs_30 --plasmids pFC8_LINEARIZED
+
+.PHONY: models union predict
+```
+
 ## References
 
 1. Stolz R, Sulthana S, Hartono SR, Malig M, Benham CJ, Chedin F. Interplay between DNA sequence and negative superhelicity drives R-loop structures. Proc Natl Acad Sci U S A. 2019 Mar 26;116(13):6260-6269. doi: 10.1073/pnas.1819476116. Epub 2019 Mar 8. PMID: 30850542; PMCID: PMC6442632.
