@@ -133,6 +133,9 @@ predict:
 
 .PHONY: models union predict
 ```
+```
+make all
+```
 
 ## References
 
