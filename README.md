@@ -64,32 +64,38 @@ plasmid1_rloop2 67 342
 ```
 These will contain the experimental results where the first index and last index are where an R-loop has been experimentally found inside the given plasmid.
 
-1. To build a model collection we run the following,
+0. Split data as desired into full training data set defined as its own `BEDFile` and the holdout set.
 ```sh
-rloop-grammar-build-model Collection_Plasmid1_runs_30 -c 30 -p 13 -w 4 --plasmids Plasmid1 -tp 10
+TODO
 ```
-* `--plasmids` The plasmids which to build the model from, as defined in `plasmids.ini`.
-* `-tp` The training set precentage to use for the accomponing BED file for each plasmid.
-* `-c` The number of runs to generate for each model collection.
-* `-w` The k-mer size.
+* `-`
+
+2. This command provides a single `plasmid` dictionary with corresponding weights for the `sp` of `BEDFile` using `k` and `p` as k-mer size and padding. `c` is the number of runs for an ensemble. It could also be used to build a model with probabilities if one chooses to use only this dictionary.
+```sh
+rloop-grammar-build-model Collection_Plasmid1_runs_30 -c 30 -p 13 -k 4 --plasmids Plasmid1 -sp 10
+```
+* `--plasmid` The plasmid which to build the model from, as defined in `plasmids.ini`.
+* `-sp` The sampling percent from the `BEDFile` to use for the accomponing BED file for each plasmid.
+* `-c` The desired number of models for the ensemble.
+* `-k` The k-mer size.
 * `-p` The padding used for the sliding windows in the critical regions.
 * `-d` (Optional) To duplicate a run utilizing the same seed or training set, use this option to select a model to copy from; this will override `-c`.
 
-2. To union two model collections together, we then run,
+2. This command generates the ensemble of `c` models on the union of `Plasmid1` and `Plasmid2`. To avoid ambiguities we use a `stochastic` or `deterministic` union of the dictionaries.
 ```sh
 rloop-grammar-union-models UnionCollection_Plasmid1_Plasmid2 -m stochastic -i Collection_Plasmid1_runs_30 Collection_Plasmid2_runs_30
 ```
 * `-i` The two input plasmids which are used to build the union model.
-* `-m` The method used to take the union, the current supported options are stochastic and deterministic.
-   
-3. Then we can make a prediction.
+* `-m` The method used to take the union, the current supported options are `stochastic` and `deterministic` (default is `stochastic`).
+
+3. This command generates an ensemble of `c` predictions on a `plasmid` for each model in the ensemble.
 ```sh
-rloop-grammar-predict UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -i UnionCollection_Plasmid1_Plasmid2 --plasmids Plasmid3
+rloop-grammar-predict UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -i UnionCollection_Plasmid1_Plasmid2 --plasmid Plasmid3
 ```
 * `-i` The input model used to build the prediction.
-* `-p` The plasmid used to predict upon.
+* `-plasmid` The plasmid used to predict upon. 
 
-4. And finally we can graph the prediction.
+4. Take average of the ensemble of `c` predictions and then graph.
 ```sh
 rloop-grammar-graph-prediction UnionCollection_Plasmid1_Plasmid2_predict_on_Plasmid3 -n Prediction_Plasmid3
 ```
