@@ -64,13 +64,39 @@ plasmid1_rloop2 67 342
 ```
 These will contain the experimental results where the first index and last index are where an R-loop has been experimentally found inside the given plasmid.
 
-0. Split data as desired into full training data set defined as its own `BEDFile` and the holdout set.
-```sh
-TODO
-```
-* `-`
+### Data splitting
+-----
 
-2. This command provides a single `plasmid` dictionary with corresponding weights for the `sp` of `BEDFile` using `k` and `p` as k-mer size and padding. `c` is the number of runs for an ensemble. It could also be used to build a model with probabilities if one chooses to use only this dictionary.
+0. Split data as desired into full training data set defined as its own `BEDFile` and the holdout set.
+
+Included in `training_data.zip` is `make_training.py`. This is a script that will separate out any BED files in the working directory into both a training and test set. The seed that was used in generation of the `model_data.zip` is provided.
+```
+python make_training.py
+```
+We split the BED file into three folds,
+```
++--------+--------+--------+
+| Fold 1 | Fold 2 | Fold 3 |
++--------+--------+--------+
+```
+The folds are then used to build three different training and test sets as follows,
+```
+		+--------+--------+
+Training 1	| Fold 1 | Fold 2 |
+		+--------+--------+
+		+--------+--------+
+Training 2	| Fold 1 | Fold 3 |
+		+--------+--------+
+		+--------+--------+
+Training 3	| Fold 2 | Fold 3 |
+		+--------+--------+
+```
+The `model_data.zip` is built off the Training 1 dataset, the other two are used for validation of results.
+
+### Building the model
+-----
+
+1. This command provides a single `plasmid` dictionary with corresponding weights for the `sp` of `BEDFile` using `k` and `p` as k-mer size and padding. `c` is the number of runs for an ensemble. It could also be used to build a model with probabilities if one chooses to use only this dictionary.
 ```sh
 rloop-grammar-build-model Collection_Plasmid1_runs_30 -c 30 -p 13 -k 4 --plasmids Plasmid1 -sp 10
 ```
@@ -87,6 +113,9 @@ rloop-grammar-union-models UnionCollection_Plasmid1_Plasmid2 -m stochastic -i Co
 ```
 * `-i` The two input plasmids which are used to build the union model.
 * `-m` The method used to take the union, the current supported options are `stochastic` and `deterministic` (default is `stochastic`).
+
+### Generating predictions
+-----
 
 3. This command generates an ensemble of `c` predictions on a `plasmid` for each model in the ensemble.
 ```sh
@@ -149,4 +178,11 @@ make all
 2. Jonoska N, Obatake N, Poznanovik S, Price C, Riehl M, Vazquez M. (2021). Modeling RNA:DNA Hybrids with Formal Grammars. 10.1007/978-3-030-57129-0_3.
 3. Ferrari M, Poznanovik S, Riehl M, Lusk J, Hartono S, Gonzalez G, Chedin F, Vazquez M, Jonoska N. (Submitted). The R-loop Grammar predicts R-loop formation under different topological constraints.
 
+## Acknowledgements
 
+* The entire team acknowledges support from the National Science Foundation and the National Institutes of Health, DMS/NIGMS awards #2054347 and #2054321. 
+* Mariel Vazquez acknowledges support from NSF grants DMS #1716987 and DMS #1817156
+* Svetlana Poznanovic acknowledges support by Simons Foundation gift MP-TSM-00002798 and NSF DMS #1815832
+* Margherita Maria Ferrari acknowledges the support of the Natural Sciences and Engineering Research Council of Canada (NSERC) [funding reference numbers DGECR-2023-00131, RGPIN-2023-04722] and the University of Manitoba (research start-up funds) and NJ acknowledges support in part by NSF CCF #2107267 and the W.M. Keck Foundation.
+* Frederic Chedin and Stella Hartono were also supported in part by NIH grant R35 GM139549. 
+* Margherita Maria Ferrari, Natasa Jonoska, Svetlana Poznanovic, Manda Riehl and Mariel Vazquez thank the Institute of Pure and Applied Mathematics and the Association for Women in Mathematics for seeding this research.
