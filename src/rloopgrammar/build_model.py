@@ -221,9 +221,9 @@ parser = argparse.ArgumentParser(prog=PROGRAM_NAME, description=DESCRIPTION)
 parser.add_argument("output_folder")
 parser.add_argument("-c", "--count", type=int, default=10)
 parser.add_argument("-p", "--paddings", type=int, nargs="+", default=[13])
-parser.add_argument("-w", "--width", type=int, default=4)
-parser.add_argument("--plasmids", type=str, nargs="+")
-parser.add_argument("-tp", "--training_set_precent", type=int, default=10)
+parser.add_argument("-k", "--width", type=int, default=4)
+parser.add_argument("--plasmid", type=str)
+parser.add_argument("-sp", "--sampling_precent", type=int, default=10)
 parser.add_argument(
     "-d",
     "--duplicate",
@@ -240,8 +240,8 @@ def main() -> None:
     window_length = args.width
     number_of_models = args.count
     paddings = args.paddings
-    model_plasmid_names = args.plasmids
-    training_set_percent = args.training_set_precent
+    model_plasmid_names = [args.plasmid]
+    training_set_percent = args.sampling_precent
 
     if args.duplicate:
         duplicate_collection_model_folders = [x[1] for x in os.walk(args.duplicate)][0]
