@@ -7,12 +7,15 @@ name = "rloopgrammar"
 version = "0.0.1"
 description = "R-loop grammar model."
 authors = [
-    {name = "Margherita Ferrari", email = "margherita.ferrari@umanitoba.ca"},
-    {name = "Jacob Lusk", email = "jplusk@ucdavis.edu"},
-    {name = "Svetlana Poznanovic", email = "spoznan@clemson.edu"},
-    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
-    {name = "Mariel Vazquez", email = "mariel@math.ucdavis.edu"},
-    {name = "Manda Riehl", email = "riehl@rose-hulman.edu"},
+    {name = "Margherita Maria Ferrari"},
+    {name = "Svetlana Poznanović"},
+    {name = "Manda Riehl"},
+    {name = "Jacob Lusk"},
+    {name = "Stella Hartono"},
+    {name = "Georgina Gonzalez-Isunza"},
+    {name = "Frédéric Chédin"},
+    {name = "Mariel Vázquez", email = "mrlvazquez@ucdavis.edu"},
+    {name = "Nataša Jonoska, email = "jonoska@usf.edu"},
 ]
 
 readme = "README.md"
