@@ -15,7 +15,7 @@ authors = [
     {name = "Georgina Gonzalez-Isunza"},
     {name = "Frédéric Chédin"},
     {name = "Mariel Vázquez", email = "mrlvazquez@ucdavis.edu"},
-    {name = "Nataša Jonoska, email = "jonoska@usf.edu"},
+    {name = "Nataša Jonoska", email = "jonoska@usf.edu"},
 ]
 
 readme = "README.md"
