@@ -132,7 +132,7 @@ rloop-grammar-graph-prediction UnionCollection_Plasmid1_Plasmid2_predict_on_Plas
 
 ## Reproduce model data
 
-If you would like to reproduce the model data found [here](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/model_data.zip), download the zip file.
+If you would like to reproduce the model data found [here](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/tag/v0.0.1-alpha), download the zip file.
 We will be using the random seed for each run to recreate the data utilizing the `-d` duplicate option when building the model.
 
 First we need to patition the bed-files utilizing the [training data](https://github.com/Arsuaga-Vazquez-Lab/R-loopGrammar/releases/download/v0.0.1-alpha/training-data.zip) seed.
