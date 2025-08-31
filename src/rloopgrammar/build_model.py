@@ -236,7 +236,7 @@ def main() -> None:
     args = parser.parse_args()
     print(args)
 
-    plasmids = read_plasmids(args.i)
+    plasmids = read_plasmids(args.ini_file)
 
     window_length = args.width
     number_of_models = args.count
